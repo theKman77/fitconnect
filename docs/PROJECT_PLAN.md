@@ -42,6 +42,30 @@ from the approved design, with a real backend and test-mode payments.
       built. *Still to wire: Stripe recurring billing.*
 - [x] **Phase 8** — Account (profile, sections, safety & accessibility toggles, sign out)
 
+### Full-empowerment pass (2026-07-17) — every visible control now works
+- [x] Uploads: avatar (client + trainer sync), trainer video intro (+ in-app
+      playback), review progress photos — Supabase Storage (migration 0007)
+- [x] Accessibility toggles REAL: large-text scaling + high-contrast lift
+      applied app-wide via AccessibilityProvider + Txt
+- [x] Membership backed by the real subscriptions table (created when booking a
+      monthly plan; pause/resume/cancel persist); honest empty state otherwise
+- [x] Trainer settings screen (headline/bio/price/specialties/video; plan prices
+      auto-sync); every trainer account row wired; clients named in trainer chat
+- [x] Availability tab starts a dated booking; review-step card "Change";
+      Home location row; referral share clipboard fallback on web
+- [x] Google SSO button (owner must enable the Google provider in Supabase)
+- [ ] **OWNER STEP:** paste `supabase/migrations/0007_storage_and_visibility.sql`
+      into the Supabase SQL editor — uploads and client-name visibility need it
+- Deliberate exception: light/dark theme switch — the app is dark-by-design; a
+  light theme is a dedicated theming refactor, scheduled with the Arabic/RTL pass.
+
+### Integrations (next step)
+- [ ] Apple Sign-In — REQUIRED by App Store review once Google SSO ships (dev build)
+- [ ] Apple Health / Google Health Connect sync (weight, workouts) — needs dev build
+- [ ] Apple Pay + mada via Moyasar (needs CR + Apple Pay certificate)
+- [ ] WhatsApp share deep-links for referrals (KSA-native growth channel)
+- [ ] Calendar sync — add booked sessions to the phone calendar
+
 ### Remaining to reach "live production"
 - [~] **4b** — Moyasar: Edge Functions `create-checkout` + `moyasar-webhook` written
       + wired (gated by EXPO_PUBLIC_PAYMENTS_ENABLED). *Owner: deploy functions +
