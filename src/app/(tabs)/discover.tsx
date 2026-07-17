@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { listTrainers, TrainerFilter } from '@/lib/api';
-import { Chip, Txt } from '@/components/ui';
+import { Chip, EmptyState, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
 
@@ -16,6 +16,7 @@ const LANGUAGES = ['English', 'Spanish', 'Arabic', 'Mandarin'];
 export default function Discover() {
   const router = useRouter();
   const [all, setAll] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [availableNow, setAvailableNow] = useState(false);
   const [minRating, setMinRating] = useState<number | undefined>();
@@ -23,7 +24,7 @@ export default function Discover() {
   const [language, setLanguage] = useState<string | undefined>();
 
   useEffect(() => {
-    listTrainers().then(setAll);
+    listTrainers().then((t) => { setAll(t); setLoading(false); });
   }, []);
 
   const results = useMemo(() => {
@@ -98,10 +99,11 @@ export default function Discover() {
         </View>
 
         <View style={{ paddingHorizontal: 22, gap: 12 }}>
+          {loading && all.length === 0 && (<><TrainerRowSkeleton /><TrainerRowSkeleton /><TrainerRowSkeleton /><TrainerRowSkeleton /></>)}
           {results.map((t) => (
             <TrainerCard key={t.id} trainer={t} variant="row" onPress={() => router.push(`/trainer/${t.id}`)} />
           ))}
-          {results.length === 0 && (
+          {!loading && results.length === 0 && (
             <View style={styles.empty}>
               <Ionicons name="search" size={28} color={colors.textFaint} />
               <Txt variant="body" center style={{ marginTop: 10 }}>No trainers match those filters yet.</Txt>

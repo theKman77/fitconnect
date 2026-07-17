@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { confirm } from '@/lib/confirm';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,24 +25,25 @@ export default function Membership() {
 
   function upgrade() {
     if (plan === 'elite') return;
-    Alert.alert(
-      'Upgrade to Elite',
-      `Elite: 12 sessions/month, priority booking, and a monthly progress review — ${formatMoney(2199)}/mo. Billing switches on with the live payment provider; in demo this just previews the plan.`,
-      [
-        { text: 'Not now', style: 'cancel' },
-        { text: 'Upgrade', onPress: () => setPlan('elite') },
-      ],
+    confirm(
+      {
+        title: 'Upgrade to Elite',
+        message: `Elite: 12 sessions/month, priority booking, and a monthly progress review — ${formatMoney(2199)}/mo. Billing switches on with the live payment provider.`,
+        confirmLabel: 'Upgrade',
+      },
+      () => setPlan('elite'),
     );
   }
 
   function cancelPlan() {
-    Alert.alert(
-      'Cancel membership?',
-      'You keep your remaining sessions until the end of the billing period. Your loyalty streak will reset.',
-      [
-        { text: 'Keep membership', style: 'cancel' },
-        { text: 'Cancel plan', style: 'destructive', onPress: () => setCancelled(true) },
-      ],
+    confirm(
+      {
+        title: 'Cancel membership?',
+        message: 'You keep your remaining sessions until the end of the billing period. Your loyalty streak will reset.',
+        confirmLabel: 'Cancel plan',
+        destructive: true,
+      },
+      () => setCancelled(true),
     );
   }
 

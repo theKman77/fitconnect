@@ -31,6 +31,7 @@ function synthTrainer(profile: Profile): Trainer {
     video_intro_url: null,
     photos: [],
     base_price: 200,
+    socials: profile.socials ?? {},
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -61,6 +62,7 @@ export async function becomeTrainer(profile: Profile): Promise<void> {
       base_price: 200,
       languages: ['English', 'Arabic'],
       specialties: ['Strength', 'Conditioning'],
+      socials: profile.socials ?? {},
     })
     .select()
     .single();

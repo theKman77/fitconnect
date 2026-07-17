@@ -26,6 +26,8 @@ export const demoProfile: Profile = {
   stripe_customer_id: null,
   referral_code: 'FIT-ALEX',
   push_token: null,
+  socials: { instagram: 'alex.lifts' },
+  weight_goal: 78,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
 };
@@ -50,6 +52,7 @@ function makeTrainer(t: Partial<Trainer> & { id: string; display_name: string })
     video_intro_url: null,
     photos: [],
     base_price: 220,
+    socials: { instagram: 'fitconnect.coach' },
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
     ...t,
@@ -72,7 +75,7 @@ export const trainers: Trainer[] = [
     review_count: 128,
     available_now: true,
     video_intro_url: 'https://example.com/maya-intro.mp4',
-    photos: [photo('maya1'), photo('maya2'), photo('maya3')],
+    photos: [],
     base_price: 280,
   }),
   makeTrainer({
@@ -89,7 +92,7 @@ export const trainers: Trainer[] = [
     rating: 4.8,
     review_count: 96,
     available_now: true,
-    photos: [photo('diego1'), photo('diego2')],
+    photos: [],
     base_price: 220,
   }),
   makeTrainer({
@@ -106,7 +109,7 @@ export const trainers: Trainer[] = [
     rating: 4.9,
     review_count: 74,
     available_now: false,
-    photos: [photo('aisha1'), photo('aisha2')],
+    photos: [],
     base_price: 200,
   }),
   makeTrainer({
@@ -123,7 +126,7 @@ export const trainers: Trainer[] = [
     rating: 4.7,
     review_count: 58,
     available_now: false,
-    photos: [photo('liam1')],
+    photos: [],
     base_price: 300,
   }),
   makeTrainer({
@@ -140,7 +143,7 @@ export const trainers: Trainer[] = [
     rating: 4.8,
     review_count: 41,
     available_now: true,
-    photos: [photo('sofia1'), photo('sofia2')],
+    photos: [],
     base_price: 240,
   }),
   makeTrainer({
@@ -157,7 +160,7 @@ export const trainers: Trainer[] = [
     rating: 4.6,
     review_count: 33,
     available_now: false,
-    photos: [photo('marcus1')],
+    photos: [],
     base_price: 180,
   }),
 ];

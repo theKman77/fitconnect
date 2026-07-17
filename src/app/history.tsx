@@ -9,7 +9,8 @@ import { formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
 import { listMyBookings } from '@/lib/bookings';
 import { listTrainers } from '@/lib/api';
-import { Badge, Card, Txt } from '@/components/ui';
+import { isBackendConfigured } from '@/lib/supabase';
+import { Badge, Card, EmptyState, Txt } from '@/components/ui';
 import type { Booking, BookingStatus, Trainer } from '@/types/domain';
 
 const STATUS_TONE: Record<string, 'success' | 'brand' | 'neutral' | 'danger'> = {
@@ -63,12 +64,22 @@ export default function History() {
           </Card>
         ))}
 
-        <Txt variant="label" style={{ marginTop: bookings.length ? 14 : 0, marginBottom: 2 }}>Earlier</Txt>
-        {PAST.map((p, i) => (
-          <Card key={i}>
-            <Row name={p.trainer} when={p.when} total={p.total} status={p.status} />
-          </Card>
-        ))}
+        {isBackendConfigured && bookings.length === 0 && (
+          <EmptyState icon="time" title="No sessions yet"
+            subtitle="Book your first session and it will show up here."
+            actionLabel="Find a trainer" onAction={() => router.push('/(tabs)/discover')} />
+        )}
+
+        {!isBackendConfigured && (
+          <>
+            <Txt variant="label" style={{ marginTop: bookings.length ? 14 : 0, marginBottom: 2 }}>Earlier</Txt>
+            {PAST.map((p, i) => (
+              <Card key={i}>
+                <Row name={p.trainer} when={p.when} total={p.total} status={p.status} />
+              </Card>
+            ))}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );

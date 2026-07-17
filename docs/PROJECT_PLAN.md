@@ -66,14 +66,12 @@ from the approved design, with a real backend and test-mode payments.
       remaining SECURITY DEFINER advisor warnings); enable leaked-password protection
 
 ### Engagement / "make it interesting" (owner feedback 2026-07-17)
-The Progress section (and engagement generally) feels flat. Make both sides more
-compelling — ideas to design later:
-- **Client:** richer progress (photos timeline, PRs, body measurements, charts
-  with real data), streaks/challenges, goals with milestones, celebratory moments
-  after sessions, weekly recap.
-- **Trainer:** earnings dashboard, client roster & retention, ratings trend,
-  streaks/badges, upcoming schedule at a glance.
-- Treat this as a dedicated "engagement" phase after core flows + trainer app.
+- [x] **Client Progress redesign** — streak hero, stat tiles, weight-goal progress,
+      per-goal bars (from real onboarding goals), personal records, richer workouts.
+- [ ] **Trainer dashboard** — earnings over time, client roster & retention, ratings
+      trend, badges, week-at-a-glance schedule.
+- [ ] **Client extras** — challenges, celebratory post-session moment, weekly recap.
+- [ ] Wire progress/PRs/workouts to real tables (currently rich demo data).
 
 ## What needs YOU (owner-only steps) — see docs/SETUP.md
 1. Create a free Supabase project → paste URL + anon key into `.env`

@@ -9,7 +9,7 @@ import { useBooking } from '@/context/booking';
 import { listTrainers, getTrainer } from '@/lib/api';
 import { isBackendConfigured } from '@/lib/supabase';
 import { listFavoriteIds, onFavoritesChange } from '@/lib/favorites';
-import { Avatar, Badge, Txt } from '@/components/ui';
+import { Avatar, Badge, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { Segmented } from '@/components/ui/Segmented';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
@@ -27,11 +27,12 @@ export default function Home() {
   const { start } = useBooking();
   const [mode, setMode] = useState<'instant' | 'subscriptions'>('instant');
   const [trainers, setTrainers] = useState<Trainer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    listTrainers().then(setTrainers);
+    listTrainers().then((t) => { setTrainers(t); setLoading(false); });
     const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setFavoriteIds);
     load();
     return onFavoritesChange(load);
@@ -165,6 +166,7 @@ export default function Home() {
         <View style={styles.section}>
           <Txt variant="sectionTitle" style={{ marginBottom: 14 }}>Trainers near you</Txt>
           <View style={{ gap: 12 }}>
+            {loading && trainers.length === 0 && (<><TrainerRowSkeleton /><TrainerRowSkeleton /><TrainerRowSkeleton /></>)}
             {trainers.map((t) => (
               <TrainerCard
                 key={t.id}

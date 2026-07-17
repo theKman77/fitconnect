@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { becomeTrainer } from '@/lib/trainer';
+import { confirm } from '@/lib/confirm';
 import { Avatar, Card, Txt } from '@/components/ui';
 
 export default function Account() {
@@ -14,24 +15,20 @@ export default function Account() {
   const [becoming, setBecoming] = useState(false);
 
   function onBecomeTrainer() {
-    Alert.alert(
-      'Become a trainer',
-      'Set up a trainer profile so clients can book you. You can switch back to client view anytime.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Continue',
-          onPress: async () => {
-            if (!profile) return;
-            setBecoming(true);
-            await becomeTrainer(profile);
-            await updateProfile({ role: 'trainer' });
-            await refreshProfile();
-            setBecoming(false);
-            router.replace('/(trainer)' as Href);
-          },
-        },
-      ],
+    confirm(
+      {
+        title: 'Become a trainer',
+        message: 'Set up a trainer profile so clients can book you. You can switch back to client view anytime.',
+      },
+      async () => {
+        if (!profile) return;
+        setBecoming(true);
+        await becomeTrainer(profile);
+        await updateProfile({ role: 'trainer' });
+        await refreshProfile();
+        setBecoming(false);
+        router.replace('/(trainer)' as Href);
+      },
     );
   }
 

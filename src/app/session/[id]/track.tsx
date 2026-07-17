@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { confirm, notify } from '@/lib/confirm';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -123,21 +124,19 @@ export default function Track() {
   }
 
   function onSos() {
-    Alert.alert(
-      'SOS — Emergency',
-      'This will call emergency services (911) and share your live location with your emergency contact.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call 911', style: 'destructive', onPress: () => Linking.openURL('tel:911') },
-      ],
+    confirm(
+      {
+        title: 'SOS — Emergency',
+        message: 'This will call emergency services (997) and share your live location with your emergency contact.',
+        confirmLabel: 'Call 997',
+        destructive: true,
+      },
+      () => Linking.openURL('tel:997'),
     );
   }
 
   function onCall() {
-    Alert.alert(
-      'Call trainer',
-      'In-app calling connects through the live backend so numbers stay private. Use chat below for now.',
-    );
+    notify('Call trainer', 'In-app calling connects through the live backend so numbers stay private. Use chat below for now.');
   }
 
   const trainerName = trainer?.display_name.split(' ')[0] ?? 'Your trainer';
@@ -211,7 +210,11 @@ export default function Track() {
 
         {/* Chat */}
         <Txt variant="label" style={styles.groupLabel}>Chat</Txt>
+        <Txt variant="caption" style={{ marginBottom: 10 }}>
+          Payments made outside FitConnect aren’t protected by no-show cover or support.
+        </Txt>
         <View style={{ gap: 8 }}>
+          {messages.length === 0 && <Txt variant="caption">No messages yet. Say hi 👋</Txt>}
           {messages.map((m) => {
             const mine = m.sender_id === myId;
             return (

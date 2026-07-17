@@ -140,7 +140,10 @@ export default function TrainerBookingDetail() {
           )}
 
           {/* Chat */}
-          <Txt variant="label" style={{ marginTop: 24, marginBottom: 10 }}>Chat with client</Txt>
+          <Txt variant="label" style={{ marginTop: 24, marginBottom: 4 }}>Chat with client</Txt>
+          <Txt variant="caption" style={{ marginBottom: 10 }}>
+            Keep bookings on FitConnect — off-app sessions aren’t payment-protected and don’t count toward your tier.
+          </Txt>
           <View style={{ gap: 8 }}>
             {messages.map((m) => {
               const mine = m.sender_id === myId;

@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { Platform, Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
@@ -17,20 +16,22 @@ import { Segmented } from '@/components/ui/Segmented';
 const STEPS = ['Plan', 'Details', 'When & where', 'Review & pay'];
 const EQUIPMENT = ['Resistance bands', 'Yoga mat', 'Dumbbells', 'Kettlebell', 'Jump rope'];
 const TIME_SLOTS = [
-  { label: '7:00 AM', peak: false }, { label: '9:00 AM', peak: false },
-  { label: '12:00 PM', peak: false }, { label: '3:00 PM', peak: false },
-  { label: '6:00 PM', peak: true }, { label: '7:30 PM', peak: true },
+  { label: '7:00 AM', hour: 7, minute: 0, peak: false }, { label: '9:00 AM', hour: 9, minute: 0, peak: false },
+  { label: '12:00 PM', hour: 12, minute: 0, peak: false }, { label: '3:00 PM', hour: 15, minute: 0, peak: false },
+  { label: '6:00 PM', hour: 18, minute: 0, peak: true }, { label: '7:30 PM', hour: 19, minute: 30, peak: true },
 ];
+/** Next 14 days for the cross-platform date strip (native picker breaks on web). */
+const DATES = Array.from({ length: 14 }).map((_, i) => dayjs().add(i, 'day'));
 
 export default function BookingFlow() {
   const router = useRouter();
   const { profile } = useAuth();
   const { draft, update, price } = useBooking();
   const [step, setStep] = useState(0);
-  const [showDate, setShowDate] = useState(false);
   const [slot, setSlot] = useState<string | null>(null);
   const [paying, setPaying] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
 
   const trainer = draft.trainer;
   if (!trainer) {
@@ -46,12 +47,17 @@ export default function BookingFlow() {
     if (step < STEPS.length - 1) return setStep(step + 1);
     // Final: create booking + pay
     setPaying(true);
+    setPayError(null);
     try {
       const booking = await createBooking(draft, price, profile?.id ?? 'demo-client');
       const res = await payForBooking(booking.id, price.amountDue);
       if (res.ok) {
         router.replace({ pathname: '/booking/confirmation', params: { bookingId: booking.id } });
+      } else if (!res.cancelled) {
+        setPayError(res.error ?? 'Payment failed. Please try again.');
       }
+    } catch (e: any) {
+      setPayError(e?.message ?? 'Something went wrong creating your booking.');
     } finally {
       setPaying(false);
     }
@@ -62,11 +68,17 @@ export default function BookingFlow() {
     update({ equipmentItems: has ? draft.equipmentItems.filter((i) => i !== item) : [...draft.equipmentItems, item] });
   }
 
-  function pickSlot(s: { label: string; peak: boolean }) {
+  function pickDate(d: dayjs.Dayjs) {
+    // Preserve the chosen time slot (if any) on the new date.
+    const cur = draft.scheduledAt ? dayjs(draft.scheduledAt) : null;
+    const next = d.hour(cur?.hour() ?? 0).minute(cur?.minute() ?? 0).second(0);
+    update({ scheduledAt: next.toDate() });
+  }
+
+  function pickSlot(s: (typeof TIME_SLOTS)[number]) {
     setSlot(s.label);
-    update({ isPeak: s.peak });
-    const base = draft.scheduledAt ?? new Date();
-    update({ scheduledAt: base });
+    const base = draft.scheduledAt ? dayjs(draft.scheduledAt) : dayjs();
+    update({ isPeak: s.peak, scheduledAt: base.hour(s.hour).minute(s.minute).second(0).toDate() });
   }
 
   return (
@@ -223,24 +235,22 @@ export default function BookingFlow() {
             )}
 
             <Txt variant="label" style={styles.groupLabel}>Date</Txt>
-            <Card onPress={() => setShowDate(true)}>
-              <View style={styles.addrRow}>
-                <Ionicons name="calendar" size={18} color={colors.textMuted} />
-                <Txt variant="bodyStrong" style={{ flex: 1 }}>
-                  {draft.scheduledAt ? dayjs(draft.scheduledAt).format('ddd, MMM D') : 'Select a date'}
-                </Txt>
-                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-              </View>
-            </Card>
-            {showDate && (
-              <DateTimePicker
-                value={draft.scheduledAt ?? new Date()}
-                mode="date"
-                minimumDate={new Date()}
-                themeVariant="dark"
-                onChange={(_, d) => { setShowDate(Platform.OS === 'ios'); if (d) update({ scheduledAt: d }); }}
-              />
-            )}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }} style={{ marginHorizontal: -22 }}>
+              {DATES.map((d) => {
+                const on = draft.scheduledAt ? dayjs(draft.scheduledAt).isSame(d, 'day') : false;
+                return (
+                  <Pressable key={d.format('YYYY-MM-DD')} onPress={() => pickDate(d)}
+                    style={[styles.dateChip, on && styles.dateChipOn]}>
+                    <Txt style={[styles.dateDow, on && { color: colors.primary }]}>
+                      {d.isSame(dayjs(), 'day') ? 'TODAY' : d.format('ddd').toUpperCase()}
+                    </Txt>
+                    <Txt style={[styles.dateNum, on && { color: colors.textPrimary }]}>{d.format('D')}</Txt>
+                    <Txt style={[styles.dateMon, on && { color: colors.textSecondary }]}>{d.format('MMM')}</Txt>
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
 
             <Txt variant="label" style={styles.groupLabel}>Time</Txt>
             <View style={styles.equipWrap}>
@@ -302,6 +312,12 @@ export default function BookingFlow() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {payError && step === STEPS.length - 1 && (
+          <View style={styles.errorRow}>
+            <Ionicons name="alert-circle" size={16} color={colors.danger} />
+            <Txt variant="caption" color={colors.danger} style={{ flex: 1 }}>{payError}</Txt>
+          </View>
+        )}
         <Button
           title={step < STEPS.length - 1 ? 'Continue' : `Pay ${formatMoney(price.amountDue)}`}
           onPress={next}
@@ -364,6 +380,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', minWidth: 96,
   },
   slotOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  dateChip: {
+    width: 64, alignItems: 'center', paddingVertical: 12, borderRadius: radius.md,
+    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 2,
+  },
+  dateChipOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
+  dateDow: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 0.8, color: colors.textDim },
+  dateNum: { fontFamily: fonts.extrabold, fontSize: 18, color: colors.textMuted },
+  dateMon: { fontFamily: fonts.medium, fontSize: 10, color: colors.textDim },
   peakNote: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16,
     backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder,
@@ -376,4 +400,5 @@ const styles = StyleSheet.create({
   visaTxt: { fontFamily: fonts.extrabold, fontSize: 11, color: colors.white, letterSpacing: 1 },
   protection: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, paddingHorizontal: 4 },
   footer: { padding: 22, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  errorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
 });

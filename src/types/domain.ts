@@ -33,8 +33,29 @@ export interface Profile {
   stripe_customer_id: string | null;
   referral_code: string | null;
   push_token: string | null;
+  socials: Socials;
+  weight_goal: number | null;
   created_at: string;
   updated_at: string;
+}
+
+/** Social handles (all optional). */
+export interface Socials {
+  instagram?: string;
+  tiktok?: string;
+  x?: string;
+  youtube?: string;
+  snapchat?: string;
+  website?: string;
+}
+
+export interface PersonalRecord {
+  id: string;
+  client_id: string;
+  lift: string;
+  value: number;
+  unit: string;
+  achieved_at: string;
 }
 
 export interface Trainer {
@@ -58,6 +79,7 @@ export interface Trainer {
   video_intro_url: string | null;
   photos: string[];
   base_price: number;
+  socials: Socials;
   created_at: string;
   updated_at: string;
 }

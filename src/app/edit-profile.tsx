@@ -15,16 +15,28 @@ export default function EditProfile() {
   const [phone, setPhone] = useState(profile?.phone ?? '');
   const [ecName, setEcName] = useState(profile?.emergency_contact_name ?? '');
   const [ecPhone, setEcPhone] = useState(profile?.emergency_contact_phone ?? '');
+  const [instagram, setInstagram] = useState(profile?.socials?.instagram ?? '');
+  const [tiktok, setTiktok] = useState(profile?.socials?.tiktok ?? '');
+  const [xHandle, setXHandle] = useState(profile?.socials?.x ?? '');
+  const [youtube, setYoutube] = useState(profile?.socials?.youtube ?? '');
   const [saving, setSaving] = useState(false);
+
+  const clean = (s: string) => s.trim().replace(/^@/, '');
 
   async function save() {
     setSaving(true);
+    const socials: Record<string, string> = {};
+    if (clean(instagram)) socials.instagram = clean(instagram);
+    if (clean(tiktok)) socials.tiktok = clean(tiktok);
+    if (clean(xHandle)) socials.x = clean(xHandle);
+    if (clean(youtube)) socials.youtube = clean(youtube);
     await updateProfile({
       full_name: name,
       city,
       phone: phone || null,
       emergency_contact_name: ecName || null,
       emergency_contact_phone: ecPhone || null,
+      socials,
     });
     setSaving(false);
     router.back();
@@ -54,6 +66,19 @@ export default function EditProfile() {
 
           <Txt variant="label" style={styles.label}>Phone</Txt>
           <Field value={phone} onChangeText={setPhone} placeholder="+966 5x xxx xxxx" keyboardType="phone-pad" />
+
+          <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>Socials</Txt>
+          <Txt variant="caption" style={{ marginBottom: 10 }}>
+            Shown on your public profile. Handles only — no @ needed.
+          </Txt>
+          <Txt variant="label" style={styles.label}>Instagram</Txt>
+          <Field value={instagram} onChangeText={setInstagram} placeholder="username" autoCapitalize="none" />
+          <Txt variant="label" style={styles.label}>TikTok</Txt>
+          <Field value={tiktok} onChangeText={setTiktok} placeholder="username" autoCapitalize="none" />
+          <Txt variant="label" style={styles.label}>X (Twitter)</Txt>
+          <Field value={xHandle} onChangeText={setXHandle} placeholder="username" autoCapitalize="none" />
+          <Txt variant="label" style={styles.label}>YouTube</Txt>
+          <Field value={youtube} onChangeText={setYoutube} placeholder="channel" autoCapitalize="none" />
 
           <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>Emergency contact</Txt>
           <Txt variant="caption" style={{ marginBottom: 10 }}>

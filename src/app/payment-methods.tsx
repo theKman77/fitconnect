@@ -1,4 +1,5 @@
-import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { notify } from '@/lib/confirm';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -11,13 +12,10 @@ export default function PaymentMethods() {
 
   function addCard() {
     if (!isBackendConfigured) {
-      Alert.alert(
-        'Demo mode',
-        'Adding real cards switches on with the live backend + payment provider (Moyasar). For now, checkout uses this demo card.',
-      );
+      notify('Demo mode', 'Adding real cards switches on with the live backend + payment provider (Moyasar). For now, checkout uses this demo card.');
       return;
     }
-    Alert.alert('Coming soon', 'Card management arrives with the payments milestone.');
+    notify('Coming soon', 'Card management arrives with the payments milestone.');
   }
 
   return (

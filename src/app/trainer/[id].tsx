@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -54,8 +54,8 @@ export default function TrainerProfile() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Hero / video intro */}
         <View style={styles.hero}>
-          {trainer.photos[0] ? (
-            <Image source={{ uri: trainer.photos[0] }} style={StyleSheet.absoluteFill} contentFit="cover" />
+          {(trainer.photos[0] ?? trainer.avatar_url) ? (
+            <Image source={{ uri: (trainer.photos[0] ?? trainer.avatar_url ?? '').replace('/300', '/600') }} style={StyleSheet.absoluteFill} contentFit="cover" blurRadius={trainer.photos[0] ? 0 : 1} />
           ) : (
             <LinearGradient colors={[colors.surfaceHigh, colors.surface]} style={StyleSheet.absoluteFill} />
           )}
@@ -95,6 +95,16 @@ export default function TrainerProfile() {
             <View key={s} style={styles.spec}><Txt style={styles.specTxt}>{s}</Txt></View>
           ))}
         </View>
+
+        {/* Socials */}
+        {trainer.socials && Object.keys(trainer.socials).length > 0 && (
+          <View style={styles.socials}>
+            {trainer.socials.instagram && <SocialPill icon="logo-instagram" handle={trainer.socials.instagram} url={`https://instagram.com/${trainer.socials.instagram}`} />}
+            {trainer.socials.tiktok && <SocialPill icon="logo-tiktok" handle={trainer.socials.tiktok} url={`https://tiktok.com/@${trainer.socials.tiktok}`} />}
+            {trainer.socials.x && <SocialPill icon="logo-twitter" handle={trainer.socials.x} url={`https://x.com/${trainer.socials.x}`} />}
+            {trainer.socials.youtube && <SocialPill icon="logo-youtube" handle={trainer.socials.youtube} url={`https://youtube.com/@${trainer.socials.youtube}`} />}
+          </View>
+        )}
 
         {/* Tabs */}
         <View style={styles.tabs}>
@@ -153,7 +163,7 @@ export default function TrainerProfile() {
       {/* Sticky CTA */}
       <View style={styles.cta}>
         <View>
-          <Txt variant="caption">FROM</Txt>
+          <Txt variant="caption">{selected ? (selected.kind === 'subscription' ? 'MONTHLY' : selected.kind === 'pack' ? 'PACK' : 'SESSION') : 'FROM'}</Txt>
           <Txt style={styles.ctaPrice}>{formatMoney(selected?.price ?? trainer.base_price)}</Txt>
         </View>
         <Button title="Book a session" onPress={book} fullWidth={false} style={{ flex: 1, marginLeft: 16 }} />
@@ -166,6 +176,15 @@ function IconBtn({ icon, onPress, tint }: { icon: keyof typeof Ionicons.glyphMap
   return (
     <Pressable onPress={onPress} style={styles.iconBtn}>
       <Ionicons name={icon} size={20} color={tint ?? colors.white} />
+    </Pressable>
+  );
+}
+
+function SocialPill({ icon, handle, url }: { icon: keyof typeof Ionicons.glyphMap; handle: string; url: string }) {
+  return (
+    <Pressable onPress={() => Linking.openURL(url)} style={styles.socialPill}>
+      <Ionicons name={icon} size={14} color={colors.textSecondary} />
+      <Txt style={styles.socialTxt}>@{handle}</Txt>
     </Pressable>
   );
 }
@@ -191,6 +210,9 @@ const styles = StyleSheet.create({
   metaStrong: { fontFamily: fonts.bold, fontSize: 13, color: colors.textPrimary },
   bio: { paddingHorizontal: 22, marginTop: 16 },
   specialties: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 22, marginTop: 16 },
+  socials: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingHorizontal: 22, marginTop: 12 },
+  socialPill: { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 7 },
+  socialTxt: { fontFamily: fonts.semibold, fontSize: 12, color: colors.textSecondary },
   spec: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.pill, paddingHorizontal: 12, paddingVertical: 6 },
   specTxt: { fontFamily: fonts.medium, fontSize: 12, color: colors.textSecondary },
   tabs: { flexDirection: 'row', gap: 18, paddingHorizontal: 22, marginTop: 24, borderBottomWidth: 1, borderBottomColor: colors.border },

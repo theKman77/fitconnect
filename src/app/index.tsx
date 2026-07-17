@@ -5,9 +5,11 @@ import { colors } from '@/theme';
 
 /** Boot router: send the user to auth, onboarding, or the app based on state. */
 export default function Index() {
-  const { profile, loading } = useAuth();
+  const { profile, session, loading, isDemo } = useAuth();
 
-  if (loading) {
+  // Wait while auth is initializing, or while a signed-in user's profile is
+  // still loading (e.g. right after sign-up) — otherwise we'd flash Welcome.
+  if (loading || (!isDemo && session && !profile)) {
     return (
       <View style={{ flex: 1, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color={colors.primary} />
