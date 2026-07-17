@@ -43,8 +43,10 @@ from the approved design, with a real backend and test-mode payments.
 - [x] **Phase 8** — Account (profile, sections, safety & accessibility toggles, sign out)
 
 ### Remaining to reach "live production"
-- [ ] **4b** — Moyasar: Supabase Edge Function `create-checkout` + webhook to mark
-      paid; payout flow for trainers
+- [~] **4b** — Moyasar: Edge Functions `create-checkout` + `moyasar-webhook` written
+      + wired (gated by EXPO_PUBLIC_PAYMENTS_ENABLED). *Owner: deploy functions +
+      set keys (docs/SETUP.md §3).* Trainer payout flow still TODO.
+- [x] **Web auto-deploy** — `netlify.toml` + git repo ready for GitHub→Netlify CI
 - [x] **5b (chat)** — Realtime chat wired to Supabase (persists + live subscribe);
       demo mode simulates a trainer reply
 - [ ] **5c** — Live location broadcast (needs trainer-side app) + native-maps dev-client build

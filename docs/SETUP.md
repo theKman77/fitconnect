@@ -66,26 +66,80 @@ automatically.
 
 ## 3. Turn on payments (Moyasar — test mode)
 
-Market is **Saudi Arabia**, so payments run on **Moyasar** (Saudi payment
-gateway: mada, Apple Pay, Visa/Mastercard). Stripe doesn't onboard KSA-based
-businesses, which is why we don't use it.
+Market is **Saudi Arabia**, so payments run on **Moyasar** (mada, Apple Pay,
+cards). The checkout code + two backend functions are already written; you just
+create the account, deploy the functions, and flip a switch.
 
+**a. Get a Moyasar test key**
 1. Sign up at https://moyasar.com (test mode needs no CR/business docs).
-2. In the dashboard, copy your **test secret key** (`sk_test_...`).
-3. When we reach the payments milestone, that key goes into a Supabase Edge
-   Function secret — I'll wire the checkout call; you only paste the key.
-4. Test cards are listed in Moyasar's docs (e.g. mada/Visa test numbers).
+2. In the dashboard, switch to **Test mode** and copy your **secret key** (`sk_test_...`).
 
-> Going **live** with real money requires Moyasar's business verification
+**b. Deploy the two Edge Functions** (needs the free Supabase CLI once)
+```bash
+npm install -g supabase
+supabase login                       # opens browser
+supabase link --project-ref <your-project-ref>   # from your Supabase URL
+supabase secrets set MOYASAR_SECRET_KEY=sk_test_xxxxx
+supabase secrets set MOYASAR_WEBHOOK_SECRET=any-long-random-string
+supabase functions deploy create-checkout --no-verify-jwt
+supabase functions deploy moyasar-webhook --no-verify-jwt
+```
+
+**c. Point Moyasar at the webhook**
+In the Moyasar dashboard → Webhooks, add:
+- URL: `https://<your-project-ref>.functions.supabase.co/moyasar-webhook`
+- Secret token: the same `MOYASAR_WEBHOOK_SECRET` you set above
+- Event: `payment_paid`
+
+**d. Turn it on in the app**
+Add to `.env`, then restart `npm start`:
+```
+EXPO_PUBLIC_PAYMENTS_ENABLED=true
+```
+Now checkout opens the real Moyasar page. Use a test card (Moyasar docs list
+them, e.g. Visa `4111 1111 1111 1111`, any future expiry/CVC). Until you set this
+flag, payment is simulated (no charge).
+
+> Going **live** with real money later requires Moyasar's business verification
 > (CR number, bank IBAN) — a step only you can do.
 
 ---
 
-## 4. Native features that need a "dev build" (later)
+## 4. Auto-deploy the web demo (GitHub → Netlify)
 
-Live map tracking uses a native module that Expo Go can't load. When you're
-ready, we build a custom **dev client** (free, via EAS Build) to enable the live
-map. Everything else — booking, payments, chat, ratings — works in Expo Go today.
+So your web link updates itself whenever the app changes:
+
+1. **Put the code on GitHub** (one time). Create an empty repo at
+   github.com/new (e.g. `fitconnect`), then in `D:\Fitconnect`:
+   ```bash
+   git remote add origin https://github.com/<you>/fitconnect.git
+   git push -u origin main
+   ```
+   (`.env` is gitignored, so your keys are NOT uploaded.)
+2. **Connect Netlify.** At app.netlify.com → **Add new site → Import an existing
+   project → GitHub** → pick the repo. Netlify reads `netlify.toml` for the build
+   settings automatically.
+3. **Add env vars** in Netlify → Site settings → Environment variables:
+   `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY` (and
+   `EXPO_PUBLIC_CURRENCY=SAR`). Deploy.
+
+From then on, every `git push` auto-builds and updates your live link.
+
+---
+
+## 5. Native features that need a "dev build" (maps + push)
+
+Live map tracking and push notifications use native code that Expo Go can't
+load. To enable them we build a free custom **dev client** with EAS:
+```bash
+npm install -g eas-cli
+eas login                    # free Expo account
+eas build:configure
+eas build --profile development --platform ios   # or android
+```
+Install the resulting build on your phone (link/QR from EAS). From then you run
+`npx expo start --dev-client` instead of plain Expo Go. Everything else —
+booking, payments, chat, ratings, trainer side — works in Expo Go today.
 
 ---
 
