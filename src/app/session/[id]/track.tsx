@@ -2,15 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { getBooking } from '@/lib/bookings';
 import { getTrainer } from '@/lib/api';
 import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
-import { subscribeBooking } from '@/lib/realtime';
+import { subscribeBooking, subscribeTrainerLocation } from '@/lib/realtime';
 import { isBackendConfigured } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
+import { TrackMap } from '@/components/TrackMap';
 import { Avatar, Badge, Button, Txt } from '@/components/ui';
 import type { Booking, Message, Trainer } from '@/types/domain';
 
@@ -38,8 +38,16 @@ export default function Track() {
   const [sharing, setSharing] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
+  const [trainerLoc, setTrainerLoc] = useState<{ lat: number; lng: number } | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const myId = profile?.id ?? 'demo-client';
+
+  const destination =
+    booking?.lat != null && booking?.lng != null
+      ? { lat: booking.lat, lng: booking.lng }
+      : trainer?.lat != null && trainer?.lng != null
+        ? { lat: trainer.lat, lng: trainer.lng }
+        : null;
 
   useEffect(() => {
     if (!id) return;
@@ -78,6 +86,12 @@ export default function Track() {
       setBooking(b);
       setPhase(statusToPhase(b.status));
     });
+  }, [id]);
+
+  // Live mode: follow the trainer's real position on the map.
+  useEffect(() => {
+    if (!isBackendConfigured || !id) return;
+    return subscribeTrainerLocation(id, (loc) => setTrainerLoc({ lat: loc.lat, lng: loc.lng }));
   }, [id]);
 
   // Demo mode: simulate the trainer approaching so the screen feels alive.
@@ -144,18 +158,12 @@ export default function Track() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      {/* Map area (placeholder until the native-maps dev-client build) */}
+      {/* Live map */}
       <View style={styles.map}>
-        <LinearGradient colors={['#14231C', '#101013']} style={StyleSheet.absoluteFill} />
+        <TrackMap trainer={trainerLoc} destination={destination} />
         <Pressable style={styles.mapBack} onPress={() => router.replace('/(tabs)')}>
           <Ionicons name="chevron-back" size={22} color={colors.white} />
         </Pressable>
-        <View style={styles.route}>
-          <View style={styles.pinTrainer}><Ionicons name="car" size={16} color={colors.white} /></View>
-          <View style={styles.dashes} />
-          <View style={styles.pinHome}><Ionicons name="home" size={14} color={colors.white} /></View>
-        </View>
-        <Txt variant="caption" center style={styles.mapNote}>Live map enables with the dev-client build</Txt>
       </View>
 
       <ScrollView ref={scrollRef} style={styles.sheet} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>

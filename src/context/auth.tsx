@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useMemo, useState, ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase, isBackendConfigured } from '@/lib/supabase';
+import { registerForPush } from '@/lib/push';
 import { demoProfile } from '@/data/seed';
 import type { Profile } from '@/types/domain';
 
@@ -54,7 +55,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadProfile(userId: string) {
     const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
-    if (data) setProfile(data as Profile);
+    if (data) {
+      setProfile(data as Profile);
+      // Register this device for push (safe no-op on web/simulator).
+      registerForPush(userId);
+    }
     setLoading(false);
   }
 

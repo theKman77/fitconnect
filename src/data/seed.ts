@@ -25,6 +25,7 @@ export const demoProfile: Profile = {
   large_text: false,
   stripe_customer_id: null,
   referral_code: 'FIT-ALEX',
+  push_token: null,
   created_at: '2025-01-01T00:00:00Z',
   updated_at: '2025-01-01T00:00:00Z',
 };

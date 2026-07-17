@@ -32,6 +32,7 @@ export interface Profile {
   large_text: boolean;
   stripe_customer_id: string | null;
   referral_code: string | null;
+  push_token: string | null;
   created_at: string;
   updated_at: string;
 }

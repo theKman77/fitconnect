@@ -4,12 +4,15 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
+import * as Location from 'expo-location';
 import { colors, fonts, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
 import { getBooking, updateBookingStatus } from '@/lib/bookings';
 import { advanceLabel, nextStatus, STATUS_LABEL } from '@/lib/trainer';
 import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
+import { pushTrainerLocation } from '@/lib/realtime';
+import { isBackendConfigured } from '@/lib/supabase';
 import { Badge, Button, Card, Txt } from '@/components/ui';
 import type { Booking, Message } from '@/types/domain';
 
@@ -45,6 +48,24 @@ export default function TrainerBookingDetail() {
     });
     return unsub;
   }, [id, myId, reload]);
+
+  // Broadcast live location to the client while the session is active.
+  useEffect(() => {
+    if (!isBackendConfigured || !id || !booking) return;
+    const active = ['en_route', 'arriving', 'in_progress'].includes(booking.status);
+    if (!active) return;
+    let sub: Location.LocationSubscription | undefined;
+    let cancelled = false;
+    (async () => {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted' || cancelled) return;
+      sub = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.Balanced, distanceInterval: 25, timeInterval: 8000 },
+        (pos) => { pushTrainerLocation(id, pos.coords.latitude, pos.coords.longitude); },
+      );
+    })();
+    return () => { cancelled = true; sub?.remove(); };
+  }, [id, booking?.status]);
 
   async function advance() {
     if (!booking) return;

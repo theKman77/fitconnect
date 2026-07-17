@@ -49,15 +49,21 @@ from the approved design, with a real backend and test-mode payments.
 - [x] **Web auto-deploy** — `netlify.toml` + git repo ready for GitHub→Netlify CI
 - [x] **5b (chat)** — Realtime chat wired to Supabase (persists + live subscribe);
       demo mode simulates a trainer reply
-- [ ] **5c** — Live location broadcast (needs trainer-side app) + native-maps dev-client build
+- [x] **5c** — Live GPS: trainer broadcasts position (expo-location) while a session
+      is active; client map (react-native-maps, Apple Maps on iOS) follows in realtime.
+      Web keeps a fallback panel. *Needs the EAS dev-client build to run on device.*
+- [x] **Push notifications** — device registers Expo push token; `notify-trainer`
+      Edge Function alerts a trainer on new bookings. *Needs dev-client build.*
+- [x] **Security hardening** — advisor search_path warnings fixed (migration 0003)
 - [x] **Web build** — `web.output: single` so the app runs on the web too (demo link option)
 - [x] **Backend seed** — `0002_seed.sql` loads showcase trainers/plans/reviews into Postgres
 - [x] **Trainer-side surface** — become a trainer, go online, dashboard (earnings/
       upcoming), bookings list, advance session status (flows to client in realtime),
       two-way chat, switch back to client. Role-based routing at app entry.
 - [ ] **Favorites, referrals, session history** — wire to backend
-- [ ] **Push notifications** (expo-notifications)
 - [ ] **Polish** — loading/empty/error states, offline handling, accessibility pass
+- [ ] **Pre-launch security pass** — move RLS helper fns to private schema (clears
+      remaining SECURITY DEFINER advisor warnings); enable leaked-password protection
 
 ### Engagement / "make it interesting" (owner feedback 2026-07-17)
 The Progress section (and engagement generally) feels flat. Make both sides more

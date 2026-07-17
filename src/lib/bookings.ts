@@ -52,7 +52,10 @@ export async function createBooking(
 
   const { data, error } = await supabase.from('bookings').insert(row).select().single();
   if (error) throw error;
-  return data as Booking;
+  const booking = data as Booking;
+  // Alert the trainer via push (fire-and-forget; never blocks the booking).
+  supabase.functions.invoke('notify-trainer', { body: { bookingId: booking.id } }).catch(() => {});
+  return booking;
 }
 
 export async function getBooking(id: string): Promise<Booking | undefined> {
