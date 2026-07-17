@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { becomeTrainer } from '@/lib/trainer';
-import { confirm } from '@/lib/confirm';
+import { confirm, notify } from '@/lib/confirm';
 import { Avatar, Card, Txt } from '@/components/ui';
 
 export default function Account() {
@@ -34,9 +34,18 @@ export default function Account() {
 
   async function shareReferral() {
     const code = profile?.referral_code ?? 'FIT-FRIEND';
-    await Share.share({
-      message: `Join me on FitConnect — book great personal trainers on demand. Use my code ${code} and we both get a free session credit!`,
-    });
+    const message = `Join me on FitConnect — book great personal trainers on demand. Use my code ${code} and we both get a free session credit!`;
+    try {
+      await Share.share({ message });
+    } catch {
+      // Web without the native share sheet: copy to clipboard instead.
+      try {
+        await (navigator as any)?.clipboard?.writeText(message);
+        notify('Copied', 'Your invite message is on the clipboard — paste it anywhere.');
+      } catch {
+        notify('Your code', code);
+      }
+    }
   }
 
   return (

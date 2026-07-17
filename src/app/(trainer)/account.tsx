@@ -7,6 +7,7 @@ import { colors, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
 import { getMyTrainer } from '@/lib/trainer';
+import { notify } from '@/lib/confirm';
 import { Avatar, Card, Txt } from '@/components/ui';
 import type { Trainer } from '@/types/domain';
 
@@ -46,10 +47,15 @@ export default function TrainerAccount() {
 
         <View style={styles.section}>
           <Card padded={false}>
-            <Row icon="pricetags" label="Session types & pricing" />
-            <Row icon="time" label="Availability" />
-            <Row icon="wallet" label="Payouts" value="Set up" />
-            <Row icon="star" label="Reviews" value={trainer ? `${trainer.rating.toFixed(1)} (${trainer.review_count})` : '—'} last />
+            <Row icon="pricetags" label="Profile, pricing & video"
+              onPress={() => router.push('/trainer-edit' as any)} />
+            <Row icon="time" label="Availability"
+              value={trainer?.available_now ? 'Online' : 'Offline'}
+              onPress={() => router.push('/(trainer)' as any)} />
+            <Row icon="wallet" label="Payouts" value="Needs Moyasar"
+              onPress={() => notify('Payouts', 'Payouts to your IBAN switch on with live Moyasar payments. Your earnings are tracked on the Today tab meanwhile.')} />
+            <Row icon="star" label="Reviews" value={trainer ? `${trainer.rating.toFixed(1)} (${trainer.review_count})` : '—'}
+              onPress={() => trainer && router.push(`/trainer/${trainer.id}`)} last />
           </Card>
         </View>
 
@@ -79,16 +85,16 @@ export default function TrainerAccount() {
   );
 }
 
-function Row({ icon, label, value, last }: {
-  icon: keyof typeof Ionicons.glyphMap; label: string; value?: string; last?: boolean;
+function Row({ icon, label, value, last, onPress }: {
+  icon: keyof typeof Ionicons.glyphMap; label: string; value?: string; last?: boolean; onPress?: () => void;
 }) {
   return (
-    <View style={[styles.row, !last && styles.rowBorder]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, !last && styles.rowBorder, pressed && onPress ? { opacity: 0.7 } : null]}>
       <Ionicons name={icon} size={19} color={colors.textMuted} />
       <Txt variant="bodyStrong" style={{ flex: 1 }}>{label}</Txt>
       {value && <Txt variant="caption" style={{ marginRight: 6 }}>{value}</Txt>}
       <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-    </View>
+    </Pressable>
   );
 }
 

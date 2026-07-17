@@ -297,7 +297,9 @@ export default function BookingFlow() {
               <View style={styles.addrRow}>
                 <View style={styles.visa}><Txt style={styles.visaTxt}>VISA</Txt></View>
                 <Txt variant="bodyStrong" style={{ flex: 1 }}>•••• 4242</Txt>
-                <Txt variant="caption" color={colors.primary}>Change</Txt>
+                <Pressable onPress={() => router.push('/payment-methods')} hitSlop={8}>
+                  <Txt variant="caption" color={colors.primary}>Change</Txt>
+                </Pressable>
               </View>
             </Card>
 

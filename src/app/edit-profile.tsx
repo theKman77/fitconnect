@@ -3,8 +3,12 @@ import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 import { colors, fonts, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
+import { uploadFile, extFor } from '@/lib/storage';
+import { supabase, isBackendConfigured } from '@/lib/supabase';
+import { notify } from '@/lib/confirm';
 import { Avatar, Button, Txt } from '@/components/ui';
 
 export default function EditProfile() {
@@ -20,8 +24,32 @@ export default function EditProfile() {
   const [xHandle, setXHandle] = useState(profile?.socials?.x ?? '');
   const [youtube, setYoutube] = useState(profile?.socials?.youtube ?? '');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
 
   const clean = (s: string) => s.trim().replace(/^@/, '');
+
+  async function changeAvatar() {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (result.canceled || !result.assets[0] || !profile) return;
+    setUploading(true);
+    try {
+      const url = await uploadFile('avatars', profile.id, result.assets[0].uri, extFor(result.assets[0].uri, 'image'));
+      await updateProfile({ avatar_url: url });
+      // Keep the public trainer card in sync if this user is also a trainer.
+      if (isBackendConfigured && profile.role === 'trainer') {
+        await supabase.from('trainers').update({ avatar_url: url }).eq('profile_id', profile.id);
+      }
+    } catch (e: any) {
+      notify('Upload failed', e?.message ?? 'Could not upload the photo.');
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -55,7 +83,15 @@ export default function EditProfile() {
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 22 }} showsVerticalScrollIndicator={false}>
           <View style={styles.avatarWrap}>
-            <Avatar uri={profile?.avatar_url} name={name} size={84} />
+            <Pressable onPress={changeAvatar} disabled={uploading}>
+              <Avatar uri={profile?.avatar_url} name={name} size={84} />
+              <View style={styles.avatarBadge}>
+                <Ionicons name={uploading ? 'hourglass' : 'camera'} size={14} color={colors.white} />
+              </View>
+            </Pressable>
+            <Txt variant="caption" style={{ marginTop: 8 }}>
+              {uploading ? 'Uploading…' : 'Tap to change photo'}
+            </Txt>
           </View>
 
           <Txt variant="label" style={styles.label}>Full name</Txt>
@@ -112,6 +148,11 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 8, paddingBottom: 8 },
   avatarWrap: { alignItems: 'center', marginBottom: 20 },
+  avatarBadge: {
+    position: 'absolute', bottom: -2, right: -2, width: 28, height: 28, borderRadius: 14,
+    backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: colors.bg,
+  },
   label: { marginTop: 14, marginBottom: 8 },
   fieldWrap: {
     backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border,

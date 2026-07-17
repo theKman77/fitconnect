@@ -65,13 +65,24 @@ from the approved design, with a real backend and test-mode payments.
 - [ ] **Pre-launch security pass** — move RLS helper fns to private schema (clears
       remaining SECURITY DEFINER advisor warnings); enable leaked-password protection
 
-### Engagement / "make it interesting" (owner feedback 2026-07-17)
-- [x] **Client Progress redesign** — streak hero, stat tiles, weight-goal progress,
-      per-goal bars (from real onboarding goals), personal records, richer workouts.
-- [ ] **Trainer dashboard** — earnings over time, client roster & retention, ratings
-      trend, badges, week-at-a-glance schedule.
-- [ ] **Client extras** — challenges, celebratory post-session moment, weekly recap.
-- [ ] Wire progress/PRs/workouts to real tables (currently rich demo data).
+### Engagement / features pass (completed 2026-07-17, e2e-verified)
+- [x] **Progress fully working** — per-user weights/PRs/weight-goal saved to Postgres
+      (entry sheets), workouts from completed bookings, streaks; demo numbers kept
+      for demo mode. Gamification: XP, 6 levels, 9 achievements.
+- [x] **Trainer dashboard** — earnings chart, week-at-a-glance, client roster,
+      tier ladder (Bronze→Elite, fee 10%→6%), per-client loyalty fee decay,
+      payment-protection framing (anti-disintermediation levers).
+- [x] **Socials** on profiles + trainers (edit + public pills).
+- [x] **Polish** — skeletons, empty states, cross-platform confirm (web Alert fix),
+      error surfacing on booking, date strip replacing broken web date picker.
+- [x] **E2E verification harness** — scripts/e2e-run.js drives the live app in
+      headless Chrome; DB evidence checked via SQL. Found+fixed: signup race,
+      bookings RLS INSERT..RETURNING bug (migration 0006).
+- [x] **Feasibility report** published as artifact (screenshots, analysis,
+      ARPU/LTV/IAP research, disintermediation strategy).
+- [ ] **Next engagement wave (concepted in report):** post-session celebration
+      screen, challenges/squads/leaderboards, trainer Business Hub (payouts, CRM
+      notes, rebook prompts, partner-gym perk surface).
 
 ## What needs YOU (owner-only steps) — see docs/SETUP.md
 1. Create a free Supabase project → paste URL + anon key into `.env`

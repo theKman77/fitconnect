@@ -75,10 +75,10 @@ export default function Home() {
         {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <View style={styles.locRow}>
+            <Pressable style={styles.locRow} onPress={() => router.push('/edit-profile')} hitSlop={6}>
               <Ionicons name="location" size={13} color={colors.primary} />
               <Txt variant="mono" style={{ color: colors.textMuted }}>{profile?.city ?? 'Set your location'}</Txt>
-            </View>
+            </Pressable>
             <Txt variant="screenTitle" style={{ marginTop: 2 }}>{greeting()}, {firstName}</Txt>
           </View>
           <Pressable onPress={() => router.push('/(tabs)/account')}>

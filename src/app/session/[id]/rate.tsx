@@ -9,6 +9,7 @@ import { colors, fonts, radius } from '@/theme';
 import { Avatar, Button, Card, Txt } from '@/components/ui';
 import { supabase, isBackendConfigured } from '@/lib/supabase';
 import { getBooking } from '@/lib/bookings';
+import { uploadFile, extFor } from '@/lib/storage';
 import { getTrainer } from '@/lib/api';
 import { useAuth } from '@/context/auth';
 import type { Booking, Trainer } from '@/types/domain';
@@ -53,6 +54,10 @@ export default function Rate() {
   async function submit() {
     setBusy(true);
     if (isBackendConfigured && id && profile) {
+      let photoUrl: string | null = null;
+      if (photo) {
+        try { photoUrl = await uploadFile('progress', profile.id, photo, extFor(photo, 'image')); } catch {}
+      }
       await supabase.from('reviews').insert({
         booking_id: id,
         rater_id: profile.id,
@@ -61,6 +66,7 @@ export default function Rate() {
         rating,
         comment: comment || null,
         tags,
+        photo_url: photoUrl,
       });
     } else {
       await new Promise((r) => setTimeout(r, 500));
@@ -123,7 +129,8 @@ export default function Rate() {
           </Pressable>
         )}
 
-        {/* Trainer rated you back */}
+        {/* Trainer rated you back (showcase only in demo mode) */}
+        {!isBackendConfigured && (
         <Card style={{ marginTop: 20 }}>
           <View style={styles.backRow}>
             <Ionicons name="star" size={15} color={colors.primary} />
@@ -131,6 +138,7 @@ export default function Rate() {
           </View>
           <Txt variant="body" style={{ marginTop: 6 }}>"Ready on time with space cleared. Great energy!"</Txt>
         </Card>
+        )}
       </ScrollView>
 
       <View style={styles.footer}>

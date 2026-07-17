@@ -1,5 +1,6 @@
 import { supabase, isBackendConfigured } from './supabase';
 import { config } from './config';
+import { createSubscription } from './subscriptions';
 import { demoBookings, uid } from '@/data/store';
 import type { BookingDraft, PriceBreakdown } from '@/context/booking';
 import type { Booking, BookingStatus } from '@/types/domain';
@@ -53,6 +54,17 @@ export async function createBooking(
   const { data, error } = await supabase.from('bookings').insert(row).select().single();
   if (error) throw error;
   const booking = data as Booking;
+  // A subscription-kind plan starts a live membership too.
+  if (draft.sessionType?.kind === 'subscription') {
+    createSubscription(
+      clientId,
+      draft.trainer!.id,
+      draft.sessionType.id,
+      draft.sessionType.name,
+      draft.sessionType.price,
+      draft.sessionType.sessions_included ?? 8,
+    ).catch(() => {});
+  }
   // Alert the trainer via push (fire-and-forget; never blocks the booking).
   supabase.functions.invoke('notify-trainer', { body: { bookingId: booking.id } }).catch(() => {});
   return booking;

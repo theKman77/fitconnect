@@ -12,17 +12,20 @@ import { isFavorite, toggleFavorite } from '@/lib/favorites';
 import { useAuth } from '@/context/auth';
 import { useBooking } from '@/context/booking';
 import { Avatar, Badge, Button, Card, Txt } from '@/components/ui';
+import { VideoPlayerModal } from '@/components/VideoPlayerModal';
+import dayjs from 'dayjs';
 import type { SessionType, TrainerDetail } from '@/types/domain';
 
 export default function TrainerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { start } = useBooking();
+  const { start, update } = useBooking();
   const { profile } = useAuth();
   const [trainer, setTrainer] = useState<TrainerDetail | undefined>();
   const [selected, setSelected] = useState<SessionType | undefined>();
   const [fav, setFav] = useState(false);
   const [tab, setTab] = useState<'pricing' | 'availability' | 'reviews'>('pricing');
+  const [showVideo, setShowVideo] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -41,6 +44,13 @@ export default function TrainerProfile() {
 
   if (!trainer) {
     return <SafeAreaView style={styles.root}><View style={styles.center}><Txt variant="body">Loading…</Txt></View></SafeAreaView>;
+  }
+
+  function bookOn(date: Date) {
+    if (!trainer) return;
+    start(trainer, trainer.session_types, selected);
+    update({ scheduledAt: date });
+    router.push(`/booking/${trainer.id}`);
   }
 
   function book() {
@@ -64,10 +74,12 @@ export default function TrainerProfile() {
             <IconBtn icon="chevron-back" onPress={() => router.back()} />
             <IconBtn icon={fav ? 'heart' : 'heart-outline'} tint={fav ? colors.primary : colors.white} onPress={onToggleFavorite} />
           </View>
-          <View style={styles.videoTag}>
-            <Ionicons name="play" size={12} color={colors.white} />
-            <Txt style={styles.videoTagTxt}>VIDEO INTRO · 0:45</Txt>
-          </View>
+          {trainer.video_intro_url && (
+            <Pressable style={styles.videoTag} onPress={() => setShowVideo(true)}>
+              <Ionicons name="play" size={12} color={colors.white} />
+              <Txt style={styles.videoTagTxt}>WATCH INTRO</Txt>
+            </Pressable>
+          )}
         </View>
 
         {/* Identity */}
@@ -138,9 +150,22 @@ export default function TrainerProfile() {
           ))}
 
           {tab === 'availability' && (
-            <Card>
-              <Txt variant="body">Next available: today from 4:00 PM. Tap "Book a session" to pick a slot.</Txt>
-            </Card>
+            <View style={{ gap: 10 }}>
+              {Array.from({ length: 5 }).map((_, i) => {
+                const d = dayjs().add(i, 'day');
+                return (
+                  <Card key={i} onPress={() => bookOn(d.toDate())}>
+                    <View style={styles.availRow}>
+                      <View style={{ flex: 1 }}>
+                        <Txt variant="bodyStrong">{i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.format('dddd')}</Txt>
+                        <Txt variant="caption" style={{ marginTop: 2 }}>{d.format('MMM D')} · slots from 7:00 AM</Txt>
+                      </View>
+                      <Txt variant="caption" color={colors.primary}>Book this day →</Txt>
+                    </View>
+                  </Card>
+                );
+              })}
+            </View>
           )}
 
           {tab === 'reviews' && (
@@ -159,6 +184,10 @@ export default function TrainerProfile() {
           )}
         </View>
       </ScrollView>
+
+      {trainer.video_intro_url && (
+        <VideoPlayerModal visible={showVideo} uri={trainer.video_intro_url} onClose={() => setShowVideo(false)} />
+      )}
 
       {/* Sticky CTA */}
       <View style={styles.cta}>
@@ -224,6 +253,7 @@ const styles = StyleSheet.create({
   planNameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   planPrice: { fontFamily: fonts.bold, fontSize: 18, color: colors.textPrimary },
   reviewStars: { flexDirection: 'row', gap: 2 },
+  availRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   cta: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     flexDirection: 'row', alignItems: 'center',

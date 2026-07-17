@@ -12,15 +12,16 @@ import { getBooking, updateBookingStatus } from '@/lib/bookings';
 import { advanceLabel, nextStatus, STATUS_LABEL } from '@/lib/trainer';
 import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
 import { pushTrainerLocation } from '@/lib/realtime';
-import { isBackendConfigured } from '@/lib/supabase';
+import { supabase, isBackendConfigured } from '@/lib/supabase';
 import { Badge, Button, Card, Txt } from '@/components/ui';
-import type { Booking, Message } from '@/types/domain';
+import type { Booking, Message, Profile } from '@/types/domain';
 
 export default function TrainerBookingDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [booking, setBooking] = useState<Booking | undefined>();
+  const [client, setClient] = useState<Pick<Profile, 'full_name' | 'avatar_url'> | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
@@ -28,7 +29,13 @@ export default function TrainerBookingDetail() {
   const myId = profile?.id ?? 'demo-trainer';
 
   const reload = useCallback(async () => {
-    if (id) setBooking(await getBooking(id));
+    if (!id) return;
+    const b = await getBooking(id);
+    setBooking(b);
+    if (b && isBackendConfigured) {
+      const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', b.client_id).maybeSingle();
+      if (data) setClient(data);
+    }
   }, [id]);
 
   useEffect(() => {
@@ -99,7 +106,7 @@ export default function TrainerBookingDetail() {
         <Pressable onPress={() => router.back()} hitSlop={10}>
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
-        <Txt variant="sectionTitle">Session</Txt>
+        <Txt variant="sectionTitle">{client?.full_name ? `Session · ${client.full_name.split(' ')[0]}` : 'Session'}</Txt>
         <View style={{ width: 24 }} />
       </View>
 
@@ -140,7 +147,7 @@ export default function TrainerBookingDetail() {
           )}
 
           {/* Chat */}
-          <Txt variant="label" style={{ marginTop: 24, marginBottom: 4 }}>Chat with client</Txt>
+          <Txt variant="label" style={{ marginTop: 24, marginBottom: 4 }}>Chat with {client?.full_name?.split(' ')[0] ?? 'client'}</Txt>
           <Txt variant="caption" style={{ marginBottom: 10 }}>
             Keep bookings on FitConnect — off-app sessions aren’t payment-protected and don’t count toward your tier.
           </Txt>

@@ -6,6 +6,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { Button, Txt } from '@/components/ui';
 import { useAuth } from '@/context/auth';
+import { supabase, isBackendConfigured } from '@/lib/supabase';
+import { notify } from '@/lib/confirm';
 
 export default function SignIn() {
   const router = useRouter();
@@ -17,6 +19,21 @@ export default function SignIn() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+
+  async function signInWithGoogle() {
+    if (!isBackendConfigured) {
+      router.replace('/(auth)/onboarding');
+      return;
+    }
+    const redirectTo = Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : undefined;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: redirectTo ? { redirectTo } : undefined,
+    });
+    if (error) {
+      notify('Google sign-in unavailable', 'Enable the Google provider in Supabase (Authentication → Providers) to turn this on.');
+    }
+  }
 
   async function submit() {
     setError(null);
@@ -77,6 +94,12 @@ export default function SignIn() {
             loading={busy}
             style={{ marginTop: 8 }}
           />
+          <View style={styles.orRow}>
+            <View style={styles.orLine} />
+            <Txt variant="caption">or</Txt>
+            <View style={styles.orLine} />
+          </View>
+          <Button title="Continue with Google" variant="secondary" icon="logo-google" onPress={signInWithGoogle} />
           <Pressable onPress={() => setMode(mode === 'in' ? 'up' : 'in')} style={{ marginTop: 18 }}>
             <Txt variant="caption" center>
               {mode === 'in' ? "Don't have an account? " : 'Already have an account? '}
@@ -120,4 +143,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   input: { flex: 1, color: colors.textPrimary, fontFamily: fonts.regular, fontSize: 15, paddingVertical: 15 },
+  orRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 16 },
+  orLine: { flex: 1, height: 1, backgroundColor: colors.border },
 });

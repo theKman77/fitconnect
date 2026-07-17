@@ -15,6 +15,7 @@ import {
 import { SpaceMono_400Regular, SpaceMono_700Bold } from '@expo-google-fonts/space-mono';
 
 import { AuthProvider } from '@/context/auth';
+import { AccessibilityProvider } from '@/context/accessibility';
 import { BookingProvider } from '@/context/booking';
 import { colors } from '@/theme';
 
@@ -41,6 +42,7 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
         <AuthProvider>
+          <AccessibilityProvider>
           <BookingProvider>
             <StatusBar style="light" />
             <Stack
@@ -60,9 +62,11 @@ export default function RootLayout() {
               <Stack.Screen name="session/[id]/track" />
               <Stack.Screen name="session/[id]/rate" options={{ presentation: 'modal' }} />
               <Stack.Screen name="trainer-session/[id]" />
+              <Stack.Screen name="trainer-edit" />
               <Stack.Screen name="membership" />
             </Stack>
           </BookingProvider>
+          </AccessibilityProvider>
         </AuthProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
