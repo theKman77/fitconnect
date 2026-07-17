@@ -9,6 +9,9 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { supabase, isBackendConfigured } from './supabase';
 
+// Remote push needs a real build; Expo Go (SDK 54) can't get a push token.
+const isExpoGo = Constants.appOwnership === 'expo';
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldPlaySound: true,
@@ -19,7 +22,7 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerForPush(profileId: string): Promise<string | null> {
-  if (Platform.OS === 'web' || !Device.isDevice) return null;
+  if (Platform.OS === 'web' || isExpoGo || !Device.isDevice) return null;
 
   try {
     const existing = await Notifications.getPermissionsAsync();
