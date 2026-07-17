@@ -1,0 +1,17 @@
+# Netlify build config for the FitConnect web version.
+# When the GitHub repo is connected to Netlify, every push auto-builds & deploys.
+# Set EXPO_PUBLIC_SUPABASE_URL / EXPO_PUBLIC_SUPABASE_ANON_KEY (and any other
+# EXPO_PUBLIC_* vars) in Netlify -> Site settings -> Environment variables.
+
+[build]
+  command = "npx expo export --platform web"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Single-page app: send all routes to index.html so deep links work.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

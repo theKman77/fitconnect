@@ -1,0 +1,57 @@
+{
+  "expo": {
+    "name": "FitConnect",
+    "slug": "fitconnect",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/images/icon.png",
+    "scheme": "fitconnect",
+    "userInterfaceStyle": "dark",
+    "backgroundColor": "#0B0B0D",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "app.fitconnect.client",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "FitConnect uses your location to match you with nearby trainers and to show your trainer en route to your session.",
+        "NSCameraUsageDescription": "FitConnect lets you attach progress photos to your sessions."
+      }
+    },
+    "android": {
+      "package": "app.fitconnect.client",
+      "adaptiveIcon": {
+        "backgroundColor": "#0B0B0D",
+        "foregroundImage": "./assets/images/android-icon-foreground.png",
+        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+      },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION", "CAMERA"],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "output": "single",
+      "favicon": "./assets/images/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0B0B0D",
+          "image": "./assets/images/splash-icon.png",
+          "imageWidth": 160
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "FitConnect uses your location to match you with nearby trainers and track your session."
+        }
+      ],
+      "expo-secure-store",
+      "@react-native-community/datetimepicker"
+    ],
+    "experiments": {
+      "typedRoutes": true,
+      "reactCompiler": true
+    }
+  }
+}
