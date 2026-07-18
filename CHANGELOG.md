@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-07-19 — Handoff identity and marketplace experience
+
+### Brand and visual system
+
+- Replaced the interlocking-link symbol with **The Handoff**: two precisely fitted parts completing one forward-moving form, with no heart, chain-link, dating, medical, or generic fitness symbolism.
+- Regenerated the app icon, adaptive Android artwork, monochrome notification mark, splash artwork, favicon, and in-app brand mark from one deterministic vector source.
+- Kept the black and orange equity while giving the brand a quieter, more authored silhouette that remains legible at favicon size.
+
+### Core marketplace screens
+
+- Rebuilt Discover around goals and trainer fit, with Saudi-relevant language filters, collapsed advanced filters, live availability, location context, and visible vetting.
+- Rebuilt the trainer profile around coach proof: photo-led identity, verified/available states, rating/experience/location metrics, video and social presence, platform protection, clearer plans, real openings, and verified-session reviews.
+- Refined booking with persistent trainer context, a segmented progress track, clearer blocked-step guidance, and an always-visible price/checkout summary.
+- Added a profile-shaped loading skeleton and expanded browser screenshot coverage for welcome, discovery, and trainer detail.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The automated phone-sized browser smoke test passes eight critical routes with no serious console errors.
+
 ## 2026-07-19 — FitConnect 2.0 visual identity and integrations
 
 ### Brand and experience

@@ -25,6 +25,7 @@ let smokeBrowser = null;
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.getByText('FIT', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-welcome.png'), fullPage: true });
   await page.getByText('Find your trainer', { exact: true }).click();
   await page.getByText('Create your account', { exact: true }).waitFor();
   await page.getByText('Continue with Google', { exact: true }).waitFor();
@@ -33,9 +34,12 @@ let smokeBrowser = null;
   for (const name of ['Maya Okafor', 'Diego Santos', 'Aisha Rahman', 'Liam Chen', 'Sofia Marin', 'Marcus Bell']) {
     await page.getByText(name, { exact: false }).first().waitFor();
   }
+  await page.getByText('Find your person.', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-discover.png'), fullPage: true });
   await page.getByText('Maya Okafor', { exact: false }).first().click();
-  await page.getByText('Session types & pricing', { exact: true }).waitFor();
-  await page.getByText('Book a session', { exact: true }).click();
+  await page.getByText('Why train with Maya?', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-trainer.png'), fullPage: true });
+  await page.getByText('Train with Maya', { exact: true }).click();
   await page.getByText('Create your account', { exact: true }).waitFor();
 
   await page.goto(`${baseUrl}/payment-methods`, { waitUntil: 'networkidle' });
@@ -52,7 +56,7 @@ let smokeBrowser = null;
 
   const serious = errors.filter((e) => !e.includes('favicon') && !e.includes('net::ERR_ABORTED'));
   if (serious.length) throw new Error(`Browser errors: ${serious.join(' | ')}; responses: ${badResponses.join(' | ')}`);
-  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'integrations', 'reset-password'], screenshot: path.join(os.tmpdir(), 'fitconnect-smoke.png') }));
+  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'integrations', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), path.join(os.tmpdir(), 'fitconnect-trainer.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
   await smokeBrowser.close();
   smokeServer?.kill();
 })().catch(async (e) => {

@@ -1,5 +1,5 @@
 /**
- * Generates FitConnect app icons + splash from the interlocking-link mark.
+ * Generates FitConnect app icons + splash from the FitConnect handoff mark.
  * Run: node scripts/generate-icons.js
  */
 const sharp = require('sharp');
@@ -8,7 +8,14 @@ const path = require('path');
 const OUT = path.join(__dirname, '..', 'assets', 'images');
 const BG = '#08090B';
 
-/** Two interlocking links: motion, trust and connection without a generic dumbbell. */
+/**
+ * The Handoff.
+ *
+ * Two precisely fitted parts complete one forward-leaning form. The negative
+ * seam is the moment a trainer transfers structure and momentum to a client.
+ * It stays intentionally abstract: no dating-app hearts, chain links,
+ * dumbbells, initials or medical symbolism.
+ */
 function mark(fill) {
   const paint = fill ?? 'url(#brand)';
   return `
@@ -19,9 +26,9 @@ function mark(fill) {
         <stop offset="100%" stop-color="#DF3E16"/>
       </linearGradient>
     </defs>
-    <g fill="none" stroke="${paint}" stroke-width="52" stroke-linecap="round">
-      <rect x="86" y="166" width="224" height="180" rx="90" transform="rotate(-18 198 256)"/>
-      <rect x="202" y="166" width="224" height="180" rx="90" transform="rotate(18 314 256)"/>
+    <g fill="${paint}">
+      <path d="M145 102H279L264 197Q262 210 274 215L295 224L265 410H103Q76 410 81 383L122 129Q126 102 145 102Z"/>
+      <path d="M306 102H409Q436 102 431 129L390 383Q386 410 367 410H292L321 238Q323 225 311 220L290 211Z"/>
     </g>`;
 }
 

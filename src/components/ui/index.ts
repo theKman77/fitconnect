@@ -5,7 +5,7 @@ export { Card } from './Card';
 export { Chip } from './Chip';
 export { Badge } from './Badge';
 export { Avatar } from './Avatar';
-export { Skeleton, TrainerRowSkeleton } from './Skeleton';
+export { Skeleton, TrainerRowSkeleton, TrainerProfileSkeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { InputSheet } from './InputSheet';
 export { Brand } from './Brand';

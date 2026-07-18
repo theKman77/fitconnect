@@ -48,6 +48,27 @@ export function TrainerRowSkeleton() {
   );
 }
 
+/** Skeleton shaped like the photo-led trainer profile. */
+export function TrainerProfileSkeleton() {
+  return (
+    <View style={styles.profile}>
+      <Skeleton height={330} style={{ borderRadius: 0 }} />
+      <View style={styles.profileBody}>
+        <Skeleton width="42%" height={12} />
+        <Skeleton width="72%" height={28} />
+        <Skeleton width="88%" height={14} />
+        <View style={styles.profileMetrics}>
+          <Skeleton width="29%" height={62} />
+          <Skeleton width="29%" height={62} />
+          <Skeleton width="29%" height={62} />
+        </View>
+        <Skeleton width="58%" height={22} />
+        <Skeleton height={90} />
+      </View>
+    </View>
+  );
+}
+
 const styles = StyleSheet.create({
   base: { backgroundColor: colors.surfaceHigh },
   rowCard: {
@@ -60,4 +81,7 @@ const styles = StyleSheet.create({
     padding: 10,
     alignItems: 'center',
   },
+  profile: { flex: 1 },
+  profileBody: { padding: 22, gap: 13 },
+  profileMetrics: { flexDirection: 'row', justifyContent: 'space-between', marginVertical: 8 },
 });

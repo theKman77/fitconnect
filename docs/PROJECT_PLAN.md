@@ -2,7 +2,7 @@
 
 ## Current release reality — 2026-07-19
 
-The FitConnect 2.0 visual milestone now includes a new interlocking-link identity, rebuilt welcome and responsive home experiences, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. The next visual wave is the screen-by-screen redesign of Discover, trainer profile, booking, trainer dashboard, and Arabic/RTL foundations.
+The FitConnect 2.0 visual milestone now includes The Handoff identity, rebuilt welcome and responsive home experiences, goal-led Discover, a proof-led trainer profile, a clearer booking shell, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. The next visual wave is the trainer dashboard, post-session celebration, richer motion, and Arabic/RTL foundations.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 
@@ -59,7 +59,7 @@ from the approved design, with a real backend and test-mode payments.
       auto-sync); every trainer account row wired; clients named in trainer chat
 - [x] Availability tab starts a dated booking; review-step card "Change";
       Home location row; referral share clipboard fallback on web
-- [x] Google SSO button (owner must enable the Google provider in Supabase)
+- [x] Google SSO is connected through Supabase and founder-verified on the live web app
 - [ ] **OWNER STEP:** paste `supabase/migrations/0007_storage_and_visibility.sql`
       into the Supabase SQL editor — uploads and client-name visibility need it
 - Deliberate exception: light/dark theme switch — the app is dark-by-design; a

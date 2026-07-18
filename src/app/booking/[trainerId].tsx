@@ -49,6 +49,13 @@ export default function BookingFlow() {
     step === 0 ? !!draft.sessionType && draft.sessionType.kind !== 'subscription' :
     step === 2 ? !!draft.scheduledAt && !!slot && (draft.format === 'virtual' || (!!draft.addressLine.trim() && !!draft.city.trim())) :
     true;
+  const nextHint = step === 0 && !draft.sessionType
+    ? 'Choose a session plan to continue.'
+    : step === 2 && (!draft.scheduledAt || !slot)
+      ? 'Choose an available date and time.'
+      : step === 2 && draft.format !== 'virtual' && (!draft.addressLine.trim() || !draft.city.trim())
+        ? 'Add the session address and district.'
+        : null;
 
   async function next() {
     if (step < STEPS.length - 1) return setStep(step + 1);
@@ -100,14 +107,23 @@ export default function BookingFlow() {
 
   return (
     <SafeAreaView style={styles.root}>
-      {/* Header + progress */}
+      {/* Booking context + progress */}
       <View style={styles.header}>
-        <Pressable onPress={() => (step === 0 ? router.back() : setStep(step - 1))} hitSlop={10}>
+        <Pressable onPress={() => (step === 0 ? router.back() : setStep(step - 1))} hitSlop={10} style={styles.backButton} accessibilityLabel="Go to previous step">
           <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
         </Pressable>
-        <View style={styles.track}><View style={[styles.fill, { width: `${((step + 1) / STEPS.length) * 100}%` }]} /></View>
+        <View style={{ flex: 1 }}>
+          <Txt variant="monoTag">BOOKING WITH</Txt>
+          <Txt variant="bodyStrong" numberOfLines={1} style={{ marginTop: 2 }}>{trainer.display_name}</Txt>
+        </View>
+        <View style={styles.stepBubble}><Txt style={styles.stepBubbleText}>{step + 1}/{STEPS.length}</Txt></View>
       </View>
-      <Txt variant="mono" style={styles.stepLabel}>STEP {step + 1} OF {STEPS.length} · {STEPS[step].toUpperCase()}</Txt>
+      <View style={styles.track}>
+        {STEPS.map((label, index) => (
+          <View key={label} style={[styles.trackSegment, index <= step && styles.trackSegmentOn]} />
+        ))}
+      </View>
+      <Txt variant="mono" style={styles.stepLabel}>{STEPS[step].toUpperCase()}</Txt>
 
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
         {step === 0 && (
@@ -335,12 +351,21 @@ export default function BookingFlow() {
             <Txt variant="caption" color={colors.danger} style={{ flex: 1 }}>{payError}</Txt>
           </View>
         )}
-        <Button
-          title={step < STEPS.length - 1 ? 'Continue' : config.paymentsEnabled ? `Pay ${formatMoney(price.amountDue)}` : 'Reserve demo session'}
-          onPress={next}
-          disabled={!canNext}
-          loading={paying}
-        />
+        {nextHint && <Txt variant="caption" style={styles.nextHint}>{nextHint}</Txt>}
+        <View style={styles.footerRow}>
+          <View>
+            <Txt variant="caption">{step === STEPS.length - 1 ? 'DUE TODAY' : 'ESTIMATED TOTAL'}</Txt>
+            <Txt style={styles.footerPrice}>{formatMoney(price.amountDue)}</Txt>
+          </View>
+          <Button
+            title={step < STEPS.length - 1 ? 'Continue' : config.paymentsEnabled ? 'Secure checkout' : 'Reserve session'}
+            onPress={next}
+            disabled={!canNext}
+            loading={paying}
+            fullWidth={false}
+            style={styles.footerButton}
+          />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -367,9 +392,13 @@ const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 22, paddingTop: 8 },
-  track: { flex: 1, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)', overflow: 'hidden' },
-  fill: { height: '100%', backgroundColor: colors.primary, borderRadius: 3 },
-  stepLabel: { paddingHorizontal: 22, marginTop: 12, color: colors.textDim },
+  backButton: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  stepBubble: { minWidth: 42, height: 30, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 9, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder },
+  stepBubbleText: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.primaryLight },
+  track: { flexDirection: 'row', gap: 6, paddingHorizontal: 22, marginTop: 17 },
+  trackSegment: { flex: 1, height: 4, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.08)' },
+  trackSegmentOn: { backgroundColor: colors.primary },
+  stepLabel: { paddingHorizontal: 22, marginTop: 10, color: colors.textDim },
   body: { flex: 1, paddingHorizontal: 22, marginTop: 14 },
   groupLabel: { marginTop: 24, marginBottom: 10 },
   planRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -416,6 +445,10 @@ const styles = StyleSheet.create({
   visa: { backgroundColor: '#1434CB', borderRadius: 5, paddingHorizontal: 8, paddingVertical: 4 },
   visaTxt: { fontFamily: fonts.extrabold, fontSize: 11, color: colors.white, letterSpacing: 1 },
   protection: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, paddingHorizontal: 4 },
-  footer: { padding: 22, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  footer: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(17,19,24,0.98)' },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
+  footerPrice: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.textPrimary, marginTop: 1 },
+  footerButton: { flex: 1 },
+  nextHint: { color: colors.warning, marginBottom: 9 },
   errorRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
 });

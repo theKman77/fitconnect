@@ -37,9 +37,9 @@ export default function Integrations() {
         <IntegrationCard icon="logo-whatsapp" name="WhatsApp" description="Share FitConnect and referral codes through WhatsApp or WhatsApp Web." status="ready" action="Try it" onPress={() => shareOnWhatsApp('Take a look at FitConnect — book trusted personal trainers across Riyadh.')} />
         <IntegrationCard icon="calendar" name="Calendar" description="Add a FitConnect session to Google Calendar from any device." status="ready" action="Add sample" onPress={() => addSessionToCalendar({ title: 'FitConnect training session', details: 'Sample calendar integration', location: 'Riyadh', start: new Date(Date.now() + 86400000), durationMin: 60 })} />
         <IntegrationCard icon="logo-instagram" name="Social profiles" description="Clients and trainers can publish Instagram, TikTok, X and YouTube links." status="ready" action="Edit socials" onPress={() => router.push('/edit-profile')} />
+        <IntegrationCard icon="logo-google" name="Google sign-in" description="Connected through Supabase and verified by the founder on the live web app." status="ready" />
 
         <Txt style={styles.sectionLabel}>OWNER SETUP REQUIRED</Txt>
-        <IntegrationCard icon="logo-google" name="Google sign-in" description="The app code is ready. Google Cloud credentials still need to be added to Supabase." status="setup" />
         <IntegrationCard icon="card" name="Moyasar · mada · Apple Pay" description={config.paymentsEnabled ? 'Live payment mode is enabled.' : 'Checkout stays an unpaid demo until the business has a CR and Moyasar approval.'} status={config.paymentsEnabled ? 'ready' : 'setup'} />
 
         <Txt style={styles.sectionLabel}>MOBILE APP PHASE</Txt>
