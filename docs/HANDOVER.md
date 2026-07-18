@@ -124,16 +124,33 @@ date strip).
 Ranked by usefulness:
 1. **Security review** — RLS policies (0001/0003/0006/0007), edge functions,
    storage policies, anything exploitable between the two roles.
-2. **Architecture** — the dual demo/live pattern, lib-layer boundaries, state
+2. **Visual design & looks** — walk the live demo screen by screen: hierarchy,
+   spacing, typography, color use, consistency with the original design
+   (`design/FitConnect.html`), polish level vs. real production apps
+   (Uber/Calm/ClassPass tier). Call out anything that looks amateur, cramped,
+   inconsistent, or template-y — and what it should look like instead.
+3. **Functionality** — actually operate the app (live demo or `npm start`):
+   press every control, run the booking flow end to end, try edge inputs, break
+   things. Report anything that is dead, wrong, confusing, or silently failing.
+4. **Architecture** — the dual demo/live pattern, lib-layer boundaries, state
    management choices (contexts vs alternatives), realtime usage, and what will
    hurt first at 10k users.
-3. **Product/UX** — booking funnel friction, trainer-side depth, gamification
+5. **Product/UX** — booking funnel friction, trainer-side depth, gamification
    coherence, KSA-market fit (RTL/Arabic absence, gender preferences, prayer
    times), retention mechanics.
-4. **Business logic correctness** — pricing math (`context/booking.tsx`,
+6. **Business logic correctness** — pricing math (`context/booking.tsx`,
    `lib/gamification.ts` fee ladder), subscription lifecycle, streak/XP rules.
-5. **Code quality** — duplication, dead paths, error handling consistency,
+7. **Code quality** — duplication, dead paths, error handling consistency,
    anything the fast pace left behind.
 
-State severity for each finding (blocker / should-fix / nice-to-have) and be
-specific: file, line-level where possible, and the failure scenario.
+### Required output format (per finding)
+- **Severity:** blocker / should-fix / nice-to-have
+- **Where:** exact screen and/or file (line-level when possible)
+- **What's wrong:** the concrete failure or design weakness
+- **What should change:** the specific recommended change, not just the complaint
+- **Agent action:** concrete instructions the owner's AI coding agent (Claude,
+  full codebase + Supabase + deploy access) can execute — or state clearly if it
+  needs an owner-only step (accounts, money, legal) or a dev build.
+
+Finish with a prioritized top-10 change list the agent should implement first.
+The owner will hand your findings back to that agent for implementation.
