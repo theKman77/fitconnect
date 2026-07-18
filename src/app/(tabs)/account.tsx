@@ -7,6 +7,7 @@ import { colors, fonts, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { becomeTrainer } from '@/lib/trainer';
 import { confirm, notify } from '@/lib/confirm';
+import { shareOnWhatsApp } from '@/lib/integrations';
 import { Avatar, Card, Txt } from '@/components/ui';
 
 export default function Account() {
@@ -79,6 +80,8 @@ export default function Account() {
           <Row icon="stats-chart" label="Progress & measurements" onPress={() => router.push('/(tabs)/progress')} />
           <Row icon="gift" label="Invite a friend — you both get a session credit"
             value={profile?.referral_code ?? undefined} onPress={shareReferral} />
+          <Row icon="logo-whatsapp" label="Invite via WhatsApp"
+            onPress={() => shareOnWhatsApp(`Join me on FitConnect — book great personal trainers on demand. Use my code ${profile?.referral_code ?? 'FIT-FRIEND'} and we both get a free session credit!`)} />
         </Section>
 
         {/* Safety & accessibility */}

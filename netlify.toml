@@ -9,6 +9,11 @@
 
 [build.environment]
   NODE_VERSION = "20"
+  # Publishable client config (already shipped inside every public web bundle —
+  # safe to commit; real secrets live only in Supabase function secrets).
+  EXPO_PUBLIC_SUPABASE_URL = "https://nglvwjspifjkzktjbkeb.supabase.co"
+  EXPO_PUBLIC_SUPABASE_ANON_KEY = "sb_publishable__QPYvUiQ_lg9SoHU6ka81Q_5Hs_cqm8"
+  EXPO_PUBLIC_CURRENCY = "SAR"
 
 # Single-page app: send all routes to index.html so deep links work.
 [[redirects]]

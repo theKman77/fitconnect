@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { colors, fonts, radius } from '@/theme';
 import { getBooking } from '@/lib/bookings';
+import { addSessionToCalendar, shareOnWhatsApp } from '@/lib/integrations';
 import { Button, Txt } from '@/components/ui';
 import type { Booking } from '@/types/domain';
 
@@ -44,6 +45,28 @@ export default function Confirmation() {
           title="Track your trainer"
           icon="navigate"
           onPress={() => booking && router.replace(`/session/${booking.id}/track`)}
+        />
+        {booking?.scheduled_at && (
+          <Button
+            title="Add to calendar"
+            variant="secondary"
+            icon="calendar"
+            onPress={() =>
+              addSessionToCalendar({
+                title: 'FitConnect training session',
+                details: 'Personal training session booked on FitConnect.',
+                location: booking.address_line ?? undefined,
+                start: new Date(booking.scheduled_at!),
+                durationMin: booking.duration_min || 60,
+              })
+            }
+          />
+        )}
+        <Button
+          title="Tell a friend on WhatsApp"
+          variant="secondary"
+          icon="logo-whatsapp"
+          onPress={() => shareOnWhatsApp('Just booked a personal trainer on FitConnect 💪 Try it — trainers come to you, in person or virtual.')}
         />
         <Button title="View my subscription" variant="secondary" onPress={() => router.replace('/membership')} />
         <Button title="Back to home" variant="ghost" onPress={() => router.replace('/(tabs)')} />
