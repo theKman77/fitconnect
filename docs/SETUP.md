@@ -105,6 +105,29 @@ flag, payment is simulated (no charge).
 
 ---
 
+## 3b. Google sign-in (the "Client ID" Supabase asks for)
+
+Supabase needs a Google OAuth Client ID before the Google provider can be
+enabled. One-time, ~5 minutes, free:
+
+1. Go to https://console.cloud.google.com → sign in with your Google account.
+2. Top bar → project dropdown → **New project** → name it `fitconnect` → Create.
+3. Menu → **APIs & Services → OAuth consent screen** → External → fill in the
+   app name (FitConnect) and your email → Save through the steps (no scopes needed).
+4. **APIs & Services → Credentials → + Create credentials → OAuth client ID**
+   → Application type: **Web application**.
+5. Under **Authorized redirect URIs**, add EXACTLY:
+   `https://nglvwjspifjkzktjbkeb.supabase.co/auth/v1/callback`
+   Under **Authorized JavaScript origins**, add:
+   `https://magical-yeot-41384a.netlify.app`
+6. Create → copy the **Client ID** (ends in `.apps.googleusercontent.com`) and
+   the **Client secret**.
+7. In Supabase → Authentication → Providers → Google: paste the Client ID into
+   the "Client IDs" box and the secret into "Client Secret", then Save.
+
+Also set the app's redirect: Supabase → Authentication → URL Configuration →
+Site URL = `https://magical-yeot-41384a.netlify.app`.
+
 ## 4. Auto-deploy the web demo (GitHub → Netlify)
 
 So your web link updates itself whenever the app changes:
