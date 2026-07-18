@@ -10,7 +10,7 @@ import { useAuth } from '@/context/auth';
 import { isBackendConfigured } from '@/lib/supabase';
 import { listMyBookings } from '@/lib/bookings';
 import { listTrainers } from '@/lib/api';
-import { listWeights, addWeight, listPRs, upsertPR, workoutsFromBookings, weeklyStreak } from '@/lib/progress';
+import { listWeights, addWeight, listPRs, upsertPR, workoutsFromBookings, weeklyStreak, countReviewsGiven } from '@/lib/progress';
 import { computeXP, levelFromXP, ACHIEVEMENTS, ClientStats } from '@/lib/gamification';
 import { Card, EmptyState, InputSheet, Txt } from '@/components/ui';
 import type { Booking, PersonalRecord, ProgressEntry, Trainer } from '@/types/domain';
@@ -32,21 +32,31 @@ export default function Progress() {
   const [loaded, setLoaded] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [sheet, setSheet] = useState<'weight' | 'pr' | 'goal' | null>(null);
+  const [reviewsGiven, setReviewsGiven] = useState(0);
+  const [error, setError] = useState<string | null>(null);
 
   const clientId = profile?.id ?? 'demo-client';
 
   const load = useCallback(async () => {
-    const [w, p, b, t] = await Promise.all([
-      listWeights(clientId),
-      listPRs(clientId),
-      listMyBookings(clientId),
-      listTrainers(),
-    ]);
-    setWeights(w);
-    setPRs(p);
-    setBookings(b);
-    setAllTrainers(t);
-    setLoaded(true);
+    try {
+      setError(null);
+      const [w, p, b, t, reviewCount] = await Promise.all([
+        listWeights(clientId),
+        listPRs(clientId),
+        listMyBookings(clientId),
+        listTrainers(),
+        countReviewsGiven(clientId),
+      ]);
+      setWeights(w);
+      setPRs(p);
+      setBookings(b);
+      setAllTrainers(t);
+      setReviewsGiven(reviewCount);
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not load progress.');
+    } finally {
+      setLoaded(true);
+    }
   }, [clientId]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -58,7 +68,7 @@ export default function Progress() {
         sessions: completed.length,
         streakWeeks: weeklyStreak(completed.map((b) => b.scheduled_at ?? b.created_at)),
         prCount: prs.length,
-        reviewsGiven: 0,
+        reviewsGiven,
         weightLogs: weights.length,
       }
     : DEMO_STATS;
@@ -92,6 +102,7 @@ export default function Progress() {
           onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
         <View style={styles.header}><Txt variant="screenTitle">Progress</Txt></View>
+        {error && <View style={styles.section}><Card><EmptyState icon="cloud-offline-outline" title="Progress unavailable" subtitle={error} actionLabel="Try again" onAction={load} /></Card></View>}
 
         {/* Level + streak hero */}
         <View style={styles.section}>
@@ -290,10 +301,9 @@ export default function Progress() {
         fields={[{ key: 'kg', label: 'Weight (kg)', placeholder: 'e.g. 80.5', keyboardType: 'decimal-pad' }]}
         onSubmit={async (v) => {
           const kg = parseFloat(v.kg);
-          if (!isNaN(kg) && kg > 20 && kg < 400) {
-            await addWeight(clientId, kg);
-            await load();
-          }
+          if (isNaN(kg) || kg <= 20 || kg >= 400) throw new Error('Enter a weight between 20 and 400 kg.');
+          await addWeight(clientId, kg);
+          await load();
         }}
         onClose={() => setSheet(null)}
       />
@@ -306,10 +316,10 @@ export default function Progress() {
         ]}
         onSubmit={async (v) => {
           const val = parseFloat(v.value);
-          if (v.lift && !isNaN(val) && val > 0) {
-            await upsertPR(clientId, v.lift, val);
-            await load();
-          }
+          if (!v.lift.trim()) throw new Error('Enter an exercise name.');
+          if (isNaN(val) || val <= 0 || val > 1000) throw new Error('Enter a value between 0 and 1,000 kg.');
+          await upsertPR(clientId, v.lift.trim(), val);
+          await load();
         }}
         onClose={() => setSheet(null)}
       />
@@ -319,7 +329,8 @@ export default function Progress() {
         fields={[{ key: 'goal', label: 'Goal weight (kg)', placeholder: 'e.g. 78', keyboardType: 'decimal-pad', initial: goal ? String(goal) : undefined }]}
         onSubmit={async (v) => {
           const g = parseFloat(v.goal);
-          if (!isNaN(g) && g > 20 && g < 400) await updateProfile({ weight_goal: g });
+          if (isNaN(g) || g <= 20 || g >= 400) throw new Error('Enter a goal between 20 and 400 kg.');
+          await updateProfile({ weight_goal: g });
         }}
         onClose={() => setSheet(null)}
       />

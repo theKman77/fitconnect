@@ -6,11 +6,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { colors, fonts, radius } from '@/theme';
-import { formatMoney } from '@/lib/config';
+import { config, formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
 import { getMyTrainer, listTrainerBookings, setTrainerOnline, STATUS_LABEL } from '@/lib/trainer';
 import { tierForSessions, repeatClientFeePct, TRAINER_TIERS } from '@/lib/gamification';
 import { Avatar, Badge, Card, Txt } from '@/components/ui';
+import { notify } from '@/lib/confirm';
 import type { Booking, Trainer } from '@/types/domain';
 
 const ACTIVE: string[] = ['confirmed', 'en_route', 'arriving', 'in_progress'];
@@ -22,34 +23,47 @@ export default function TrainerDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [online, setOnline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const t = await getMyTrainer(profile);
-    setTrainer(t);
-    setOnline(!!t?.available_now);
-    setBookings(await listTrainerBookings(t));
+    try {
+      setLoadError(null);
+      const t = await getMyTrainer(profile);
+      setTrainer(t);
+      setOnline(!!t?.available_now);
+      setBookings(await listTrainerBookings(t));
+    } catch (e: any) {
+      setLoadError(e?.message ?? 'Could not refresh the trainer dashboard.');
+    }
   }, [profile]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
   async function toggleOnline(v: boolean) {
     setOnline(v);
-    await setTrainerOnline(trainer, v);
+    try {
+      await setTrainerOnline(trainer, v);
+    } catch (e: any) {
+      setOnline(!v);
+      notify('Status not changed', e?.message ?? 'Please try again.');
+    }
   }
 
   // ---- derived ----
   const upcoming = bookings.filter((b) => ACTIVE.includes(b.status));
   const completedAll = bookings.filter((b) => b.status === 'completed');
+  const paidCompleted = completedAll.filter((b) => b.paid);
   const firstName = (profile?.full_name ?? 'Coach').split(' ')[0];
 
   // Earnings by week, last 6 weeks (trainer's cut = total - platform fee).
   const weeks = Array.from({ length: 6 }).map((_, i) => dayjs().startOf('week').subtract(5 - i, 'week'));
   const weeklyEarnings = weeks.map((w) =>
-    completedAll
+    paidCompleted
       .filter((b) => dayjs(b.scheduled_at ?? b.created_at).isSame(w, 'week'))
-      .reduce((s, b) => s + (b.total - b.service_fee), 0),
+      .reduce((s, b) => s + (b.trainer_payout ?? 0), 0),
   );
-  const totalEarnings = completedAll.reduce((s, b) => s + (b.total - b.service_fee), 0);
+  const totalEarnings = paidCompleted.reduce((s, b) => s + (b.trainer_payout ?? 0), 0);
+  const demoPipeline = completedAll.filter((b) => !b.paid).reduce((s, b) => s + (b.trainer_payout ?? 0), 0);
   const maxWeek = Math.max(1, ...weeklyEarnings);
 
   // Tier ladder — progress accrues only from on-platform completed sessions.
@@ -83,6 +97,19 @@ export default function TrainerDashboard() {
 
         {/* Online toggle */}
         <View style={styles.section}>
+          {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
+          {trainer?.onboarding_status && trainer.onboarding_status !== 'approved' && (
+            <Card onPress={() => router.push('/trainer-edit' as any)} style={{ marginBottom: 10, borderColor: colors.primaryBorder }}>
+              <View style={styles.onlineRow}>
+                <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Txt variant="bodyStrong">Finish trainer setup</Txt>
+                  <Txt variant="caption" style={{ marginTop: 2 }}>Your profile is private until FitConnect approves it.</Txt>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+              </View>
+            </Card>
+          )}
           <Card style={online ? styles.onlineCard : undefined}>
             <View style={styles.onlineRow}>
               <View style={[styles.pulse, { backgroundColor: online ? colors.success : colors.textFaint }]} />
@@ -99,6 +126,16 @@ export default function TrainerDashboard() {
         </View>
 
         {/* Tier ladder */}
+        <View style={styles.section}>
+          <Card onPress={() => router.push('/trainer-availability' as any)}>
+            <View style={styles.onlineRow}>
+              <View style={styles.bookingIcon}><Ionicons name="calendar" size={18} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}><Txt variant="bodyStrong">Publish your schedule</Txt><Txt variant="caption" style={{ marginTop: 2 }}>Open and close bookable times in two taps</Txt></View>
+              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+            </View>
+          </Card>
+        </View>
+
         <View style={styles.section}>
           <View style={styles.tierCard}>
             <LinearGradient colors={[colors.primary, colors.primaryDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -139,9 +176,9 @@ export default function TrainerDashboard() {
               ))}
             </View>
             <View style={styles.protectRow}>
-              <Ionicons name="shield-checkmark" size={14} color={colors.success} />
+              <Ionicons name={config.paymentsEnabled ? 'shield-checkmark' : 'flask'} size={14} color={config.paymentsEnabled ? colors.success : colors.primary} />
               <Txt variant="caption" style={{ flex: 1 }}>
-                Every session is payment-protected: no-shows and late cancellations still pay out.
+                {config.paymentsEnabled ? 'Paid, completed sessions are eligible for payout.' : `Demo mode: no cash is payable. Simulated pipeline value ${formatMoney(demoPipeline)}.`}
               </Txt>
             </View>
           </Card>

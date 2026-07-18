@@ -1,5 +1,7 @@
 # FitConnect — AI Reviewer Handover Brief
 
+> Current-state update (2026-07-18): the post-audit remediation milestone is implemented. Read `CHANGELOG.md` and `docs/SUPABASE.md` before relying on historical descriptions below. Pricing, payment state, status transitions, ratings and trainer payouts are server-authoritative; profiles and progress media are private; trainer availability and fee tiers are real database logic; fake card/payment/safety/subscription claims were removed; and all six showcase trainers are visible. Payments remain explicitly simulated and unpaid until Moyasar/CR approval.
+
 You are reading the handover for **FitConnect**, a two-sided marketplace app
 (clients book personal trainers on demand) targeting **Saudi Arabia**. It was
 built end-to-end by an AI coding agent (Claude) working for a **first-time,

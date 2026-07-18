@@ -10,20 +10,21 @@ import { config } from './config';
 
 export interface CheckoutResult {
   ok: boolean;
+  simulated?: boolean;
   cancelled?: boolean;
   error?: string;
 }
 
-export async function payForBooking(bookingId: string, amount: number): Promise<CheckoutResult> {
+export async function payForBooking(bookingId: string): Promise<CheckoutResult> {
   if (!isBackendConfigured || !config.paymentsEnabled) {
-    // Simulated test-mode payment (no provider wired yet).
+    // Honest demo checkout: the booking is stored, but no money is collected.
     await new Promise((r) => setTimeout(r, 700));
-    return { ok: true };
+    return { ok: true, simulated: true };
   }
 
   try {
     const { data, error } = await supabase.functions.invoke('create-checkout', {
-      body: { bookingId, amount },
+      body: { bookingId },
     });
     if (error) return { ok: false, error: error.message };
 

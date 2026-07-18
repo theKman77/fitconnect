@@ -28,11 +28,12 @@ export async function listMessages(bookingId: string): Promise<Message[]> {
     }
     return demoMessages.get(bookingId)!;
   }
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('messages')
     .select('*')
     .eq('booking_id', bookingId)
     .order('created_at');
+  if (error) throw error;
   return (data as Message[]) ?? [];
 }
 
@@ -57,7 +58,9 @@ export async function sendMessage(bookingId: string, senderId: string, body: str
     return;
   }
 
-  await supabase.from('messages').insert({ booking_id: bookingId, sender_id: senderId, body: trimmed });
+  if (trimmed.length > 2000) throw new Error('Messages must be under 2,000 characters.');
+  const { error } = await supabase.from('messages').insert({ booking_id: bookingId, sender_id: senderId, body: trimmed });
+  if (error) throw error;
 }
 
 /** Subscribe to new messages. Returns an unsubscribe function. */

@@ -6,25 +6,27 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import * as Location from 'expo-location';
 import { colors, fonts, radius } from '@/theme';
-import { formatMoney } from '@/lib/config';
+import { config, formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
 import { getBooking, updateBookingStatus } from '@/lib/bookings';
-import { advanceLabel, nextStatus, STATUS_LABEL } from '@/lib/trainer';
+import { advanceLabel, getBookingCounterpart, nextStatus, STATUS_LABEL, type BookingCounterpart } from '@/lib/trainer';
 import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
 import { pushTrainerLocation } from '@/lib/realtime';
-import { supabase, isBackendConfigured } from '@/lib/supabase';
-import { Badge, Button, Card, Txt } from '@/components/ui';
-import type { Booking, Message, Profile } from '@/types/domain';
+import { isBackendConfigured } from '@/lib/supabase';
+import { notify } from '@/lib/confirm';
+import { Badge, Button, Card, EmptyState, Txt } from '@/components/ui';
+import type { Booking, Message } from '@/types/domain';
 
 export default function TrainerBookingDetail() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
   const [booking, setBooking] = useState<Booking | undefined>();
-  const [client, setClient] = useState<Pick<Profile, 'full_name' | 'avatar_url'> | null>(null);
+  const [client, setClient] = useState<BookingCounterpart | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const scrollRef = useRef<ScrollView>(null);
   const myId = profile?.id ?? 'demo-trainer';
 
@@ -33,15 +35,14 @@ export default function TrainerBookingDetail() {
     const b = await getBooking(id);
     setBooking(b);
     if (b && isBackendConfigured) {
-      const { data } = await supabase.from('profiles').select('full_name, avatar_url').eq('id', b.client_id).maybeSingle();
-      if (data) setClient(data);
+      setClient(await getBookingCounterpart(b.id));
     }
   }, [id]);
 
   useEffect(() => {
-    reload();
+    reload().catch(() => setLoadError('Could not load this booking.'));
     if (!id) return;
-    listMessages(id).then(setMessages);
+    listMessages(id).then(setMessages).catch(() => setLoadError('Booking loaded, but chat is unavailable.'));
     const unsub = subscribeMessages(id, (msg) => {
       setMessages((cur) => {
         if (cur.some((x) => x.id === msg.id)) return cur;
@@ -79,23 +80,33 @@ export default function TrainerBookingDetail() {
     const next = nextStatus(booking.status);
     if (!next) return;
     setBusy(true);
-    await updateBookingStatus(booking.id, next);
-    await reload();
-    setBusy(false);
+    try {
+      await updateBookingStatus(booking.id, next);
+      await reload();
+    } catch (e: any) {
+      notify('Status not changed', e?.message ?? 'Please check your connection and try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
-  function send() {
+  async function send() {
     const body = draft.trim();
     if (!body || !id) return;
     setDraft('');
     const optimistic: Message = { id: `local-${Date.now()}`, booking_id: id, sender_id: myId, body, created_at: new Date().toISOString() };
     setMessages((m) => [...m, optimistic]);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
-    sendMessage(id, myId, body);
+    try {
+      await sendMessage(id, myId, body);
+    } catch {
+      setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+      notify('Message not sent', 'Check your connection and try again.');
+    }
   }
 
   if (!booking) {
-    return <SafeAreaView style={styles.root}><View style={styles.center}><Txt variant="body">Loading…</Txt></View></SafeAreaView>;
+    return <SafeAreaView style={styles.root}><View style={styles.center}>{loadError ? <EmptyState icon="alert-circle" title="Booking unavailable" subtitle={loadError} actionLabel="Go back" onAction={() => router.back()} /> : <Txt variant="body">Loading…</Txt>}</View></SafeAreaView>;
   }
 
   const label = advanceLabel(booking.status);
@@ -116,7 +127,7 @@ export default function TrainerBookingDetail() {
           <Card>
             <View style={styles.statusHead}>
               <Txt variant="cardTitle">{STATUS_LABEL[booking.status]}</Txt>
-              <Badge label={booking.paid ? 'PAID' : 'UNPAID'} tone={booking.paid ? 'success' : 'neutral'} />
+              <Badge label={booking.payment_status === 'simulation' ? 'DEMO · UNPAID' : booking.paid ? 'PAID' : 'UNPAID'} tone={booking.paid ? 'success' : 'neutral'} />
             </View>
             <View style={styles.detailRow}><Ionicons name="calendar" size={16} color={colors.textMuted} />
               <Txt variant="body">{booking.scheduled_at ? dayjs(booking.scheduled_at).format('dddd, MMM D · h:mm A') : 'Time TBD'}</Txt>
@@ -132,7 +143,7 @@ export default function TrainerBookingDetail() {
               </View>
             )}
             <View style={styles.detailRow}><Ionicons name="cash" size={16} color={colors.textMuted} />
-              <Txt variant="body">You earn {formatMoney(booking.total - booking.service_fee)}</Txt>
+              <Txt variant="body">{booking.paid ? 'Payout' : 'Estimated payout'} {formatMoney(booking.trainer_payout ?? 0)}</Txt>
             </View>
           </Card>
 
@@ -142,14 +153,14 @@ export default function TrainerBookingDetail() {
           {booking.status === 'completed' && (
             <View style={styles.doneNote}>
               <Ionicons name="checkmark-circle" size={18} color={colors.success} />
-              <Txt variant="caption" style={{ flex: 1 }}>Session complete. Payout is on the way.</Txt>
+              <Txt variant="caption" style={{ flex: 1 }}>{booking.paid ? 'Session complete. This payout is eligible for settlement.' : 'Session complete. Demo bookings do not create a payout.'}</Txt>
             </View>
           )}
 
           {/* Chat */}
           <Txt variant="label" style={{ marginTop: 24, marginBottom: 4 }}>Chat with {client?.full_name?.split(' ')[0] ?? 'client'}</Txt>
           <Txt variant="caption" style={{ marginBottom: 10 }}>
-            Keep bookings on FitConnect — off-app sessions aren’t payment-protected and don’t count toward your tier.
+            {config.paymentsEnabled ? 'On-platform sessions keep payment records, tier progress and support in one place.' : 'Demo sessions still count toward product testing and tier previews, but do not create payment protection.'}
           </Txt>
           <View style={{ gap: 8 }}>
             {messages.map((m) => {

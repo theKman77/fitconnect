@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { colors, fonts, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
-import { confirm } from '@/lib/confirm';
+import { confirm, notify } from '@/lib/confirm';
 import { useAuth } from '@/context/auth';
 import { listTrainers } from '@/lib/api';
 import { getMySubscription, setSubscriptionStatus } from '@/lib/subscriptions';
@@ -25,11 +25,18 @@ export default function Membership() {
   const [sub, setSub] = useState<Subscription | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    setSub(await getMySubscription(profile?.id ?? 'demo-client'));
-    setTrainers(await listTrainers());
-    setLoaded(true);
+    try {
+      setError(null);
+      setSub(await getMySubscription(profile?.id ?? 'demo-client'));
+      setTrainers(await listTrainers());
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not load membership information.');
+    } finally {
+      setLoaded(true);
+    }
   }, [profile?.id]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -39,8 +46,12 @@ export default function Membership() {
 
   async function setStatus(status: 'active' | 'paused' | 'cancelled') {
     if (!sub) return;
-    await setSubscriptionStatus(sub.id, status);
-    await load();
+    try {
+      await setSubscriptionStatus(sub.id, status);
+      await load();
+    } catch (e: any) {
+      notify('Membership not changed', e?.message ?? 'Please try again.');
+    }
   }
 
   function cancelPlan() {
@@ -66,12 +77,13 @@ export default function Membership() {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ padding: 22, paddingBottom: 30 }}>
+        {error && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 12 }}>{error}</Txt>}
         {loaded && !sub && (
           <EmptyState
             icon="card"
             title="No membership yet"
-            subtitle="Subscribe to a trainer's monthly plan and it will live here — sessions, renewals, pausing."
-            actionLabel="Find a plan"
+            subtitle="Monthly plans are a preview until recurring payments and entitlement tracking are connected."
+            actionLabel="Browse trainers"
             onAction={() => router.push('/(tabs)/discover')}
           />
         )}

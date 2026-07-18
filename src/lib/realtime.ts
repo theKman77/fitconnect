@@ -30,13 +30,21 @@ export async function pushTrainerLocation(
   etaMinutes?: number,
 ): Promise<void> {
   if (!isBackendConfigured) return;
-  await supabase.from('trainer_locations').upsert({
+  const { error } = await supabase.from('trainer_locations').upsert({
     booking_id: bookingId,
     lat,
     lng,
     eta_minutes: etaMinutes ?? null,
     updated_at: new Date().toISOString(),
   });
+  if (error) throw error;
+}
+
+export async function getTrainerLocation(bookingId: string): Promise<TrainerLocation | null> {
+  if (!isBackendConfigured) return null;
+  const { data, error } = await supabase.from('trainer_locations').select('*').eq('booking_id', bookingId).maybeSingle();
+  if (error) throw error;
+  return (data as TrainerLocation) ?? null;
 }
 
 /** Client subscribes to the trainer's live position for a booking. */

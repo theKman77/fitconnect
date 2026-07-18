@@ -18,6 +18,7 @@ export default function Onboarding() {
   const [level, setLevel] = useState<string | null>(null);
   const [injuries, setInjuries] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const toggle = (arr: string[], set: (v: string[]) => void, v: string) =>
     set(arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
@@ -35,13 +36,20 @@ export default function Onboarding() {
       return;
     }
     setSaving(true);
-    await updateProfile({
-      goals,
-      experience_level: level,
-      injuries,
-      onboarded: true,
-    });
-    router.replace('/(tabs)');
+    setError(null);
+    try {
+      await updateProfile({
+        goals,
+        experience_level: level,
+        injuries,
+        onboarded: true,
+      });
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not save your answers. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (
@@ -102,7 +110,7 @@ export default function Onboarding() {
             <View style={styles.note}>
               <Ionicons name="lock-closed" size={16} color={colors.primary} />
               <Txt variant="caption" style={{ flex: 1, color: colors.textMuted }}>
-                This is shared only with trainers you book, and only for the sessions you schedule.
+                Stored privately for future matching. This MVP does not expose health notes to trainers yet.
               </Txt>
             </View>
           </>
@@ -110,6 +118,7 @@ export default function Onboarding() {
       </ScrollView>
 
       <View style={styles.footer}>
+        {error && <Txt variant="caption" color={colors.danger} center style={{ marginBottom: 10 }}>{error}</Txt>}
         <Button
           title={step < STEPS - 1 ? 'Continue' : 'Find my trainer'}
           onPress={next}

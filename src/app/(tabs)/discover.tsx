@@ -22,9 +22,10 @@ export default function Discover() {
   const [minRating, setMinRating] = useState<number | undefined>();
   const [gender, setGender] = useState<string | undefined>();
   const [language, setLanguage] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listTrainers().then((t) => { setAll(t); setLoading(false); });
+    listTrainers().then((t) => { setAll(t); setLoading(false); }).catch(() => { setError('Could not load trainers. Check your connection.'); setLoading(false); });
   }, []);
 
   const results = useMemo(() => {
@@ -104,10 +105,7 @@ export default function Discover() {
             <TrainerCard key={t.id} trainer={t} variant="row" onPress={() => router.push(`/trainer/${t.id}`)} />
           ))}
           {!loading && results.length === 0 && (
-            <View style={styles.empty}>
-              <Ionicons name="search" size={28} color={colors.textFaint} />
-              <Txt variant="body" center style={{ marginTop: 10 }}>No trainers match those filters yet.</Txt>
-            </View>
+            <EmptyState icon={error ? 'cloud-offline-outline' : 'search'} title={error ? 'Trainers unavailable' : 'No matches'} subtitle={error ?? 'Try removing a filter or searching another specialty.'} actionLabel={error ? 'Try again' : 'Clear filters'} onAction={() => { if (error) { setLoading(true); setError(null); listTrainers().then(setAll).catch(() => setError('Could not load trainers.')).finally(() => setLoading(false)); } else { setQuery(''); setAvailableNow(false); setMinRating(undefined); setGender(undefined); setLanguage(undefined); } }} />
           )}
         </View>
       </ScrollView>

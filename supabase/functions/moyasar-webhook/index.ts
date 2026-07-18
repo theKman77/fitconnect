@@ -1,43 +1,98 @@
-// Supabase Edge Function: moyasar-webhook
-// Moyasar calls this after a payment. We verify a shared secret and mark the
-// booking as paid. This is the authoritative confirmation of payment.
-//
-// Deploy: supabase functions deploy moyasar-webhook --no-verify-jwt
-// Secrets:
-//   supabase secrets set MOYASAR_WEBHOOK_SECRET=some-long-random-string
-// Then in the Moyasar dashboard add a webhook pointing to this function's URL
-// with the same secret token, subscribed to the "payment_paid" event.
-
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.110.7';
 
 const WEBHOOK_SECRET = Deno.env.get('MOYASAR_WEBHOOK_SECRET') ?? '';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL') ?? '';
 const SERVICE_ROLE = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
 
+function response(message: string, status: number): Response {
+  return new Response(message, { status, headers: { 'Content-Type': 'text/plain' } });
+}
+
 Deno.serve(async (req) => {
+  if (req.method !== 'POST') return response('method not allowed', 405);
+  if (!WEBHOOK_SECRET) return response('webhook unavailable', 503);
+
   try {
     const payload = await req.json();
-
-    // Moyasar includes the configured secret token on the payload.
-    if (WEBHOOK_SECRET && payload?.secret_token && payload.secret_token !== WEBHOOK_SECRET) {
-      return new Response('forbidden', { status: 403 });
-    }
+    const suppliedSecret = req.headers.get('x-moyasar-secret') ?? payload?.secret_token ?? '';
+    if (!suppliedSecret || suppliedSecret !== WEBHOOK_SECRET) return response('forbidden', 403);
 
     const data = payload?.data ?? payload;
+    const providerPaymentId = data?.id;
     const bookingId = data?.metadata?.booking_id;
-    const status = data?.status;
-    const isPaid = payload?.type === 'payment_paid' || status === 'paid';
+    const eventType = payload?.type ?? `payment_${data?.status ?? 'unknown'}`;
+    const amountHalalas = Number(data?.amount);
+    const currency = String(data?.currency ?? '').toUpperCase();
+    const isPaid = eventType === 'payment_paid' || data?.status === 'paid';
 
-    if (bookingId && isPaid) {
-      const supabase = createClient(SUPABASE_URL, SERVICE_ROLE);
-      await supabase
-        .from('bookings')
-        .update({ paid: true, status: 'confirmed', stripe_payment_intent: data?.id ?? null })
-        .eq('id', bookingId);
+    if (!providerPaymentId || !bookingId) return response('invalid event metadata', 400);
+
+    const service = createClient(SUPABASE_URL, SERVICE_ROLE, { auth: { persistSession: false } });
+    const { error: eventError } = await service.from('payment_events').insert({
+      provider: 'moyasar',
+      provider_event_id: providerPaymentId,
+      booking_id: bookingId,
+      event_type: eventType,
+      amount_halalas: Number.isFinite(amountHalalas) ? amountHalalas : null,
+      currency: currency || null,
+      payload,
+      status: 'received',
+    });
+
+    if (eventError?.code === '23505') return response('duplicate', 200);
+    if (eventError) return response('could not record event', 500);
+
+    const { data: booking, error: bookingError } = await service
+      .from('bookings')
+      .select('id,amount_due,payment_status,status,stripe_checkout_id')
+      .eq('id', bookingId)
+      .single();
+
+    const expectedHalalas = booking ? Math.round(Number(booking.amount_due) * 100) : -1;
+    const valid = Boolean(
+      booking
+      && !bookingError
+      && isPaid
+      && currency === 'SAR'
+      && Number.isSafeInteger(amountHalalas)
+      && amountHalalas === expectedHalalas
+      && booking.payment_status === 'pending'
+      && (!booking.stripe_checkout_id || booking.stripe_checkout_id === data?.invoice_id || booking.stripe_checkout_id === data?.invoice?.id),
+    );
+
+    if (!valid) {
+      await service.from('payment_events').update({
+        status: 'rejected',
+        error: 'Booking, status, invoice, amount, or currency did not match',
+        processed_at: new Date().toISOString(),
+      }).eq('provider', 'moyasar').eq('provider_event_id', providerPaymentId);
+      return response('event rejected', 400);
     }
 
-    return new Response('ok', { status: 200 });
-  } catch (e) {
-    return new Response(`error: ${e}`, { status: 500 });
+    const { error: bookingUpdateError } = await service
+      .from('bookings')
+      .update({
+        paid: true,
+        payment_status: 'paid',
+        payment_provider: 'moyasar',
+        status: 'confirmed',
+        stripe_payment_intent: providerPaymentId,
+      })
+      .eq('id', bookingId)
+      .eq('payment_status', 'pending');
+
+    if (bookingUpdateError) {
+      await service.from('payment_events').update({
+        status: 'failed', error: bookingUpdateError.message, processed_at: new Date().toISOString(),
+      }).eq('provider', 'moyasar').eq('provider_event_id', providerPaymentId);
+      return response('booking update failed', 500);
+    }
+
+    await service.from('payment_events').update({
+      status: 'processed', processed_at: new Date().toISOString(),
+    }).eq('provider', 'moyasar').eq('provider_event_id', providerPaymentId);
+    return response('ok', 200);
+  } catch {
+    return response('invalid webhook payload', 400);
   }
 });

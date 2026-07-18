@@ -41,8 +41,9 @@ export default function EditProfile() {
       const url = await uploadFile('avatars', profile.id, result.assets[0].uri, extFor(result.assets[0].uri, 'image'));
       await updateProfile({ avatar_url: url });
       // Keep the public trainer card in sync if this user is also a trainer.
-      if (isBackendConfigured && profile.role === 'trainer') {
-        await supabase.from('trainers').update({ avatar_url: url }).eq('profile_id', profile.id);
+      if (isBackendConfigured) {
+        const { error } = await supabase.from('trainers').update({ avatar_url: url }).eq('profile_id', profile.id);
+        if (error) throw error;
       }
     } catch (e: any) {
       notify('Upload failed', e?.message ?? 'Could not upload the photo.');
@@ -58,16 +59,29 @@ export default function EditProfile() {
     if (clean(tiktok)) socials.tiktok = clean(tiktok);
     if (clean(xHandle)) socials.x = clean(xHandle);
     if (clean(youtube)) socials.youtube = clean(youtube);
-    await updateProfile({
-      full_name: name,
-      city,
-      phone: phone || null,
-      emergency_contact_name: ecName || null,
-      emergency_contact_phone: ecPhone || null,
-      socials,
-    });
-    setSaving(false);
-    router.back();
+    try {
+      await updateProfile({
+        full_name: name.trim(),
+        city: city.trim(),
+        phone: phone.trim() || null,
+        emergency_contact_name: ecName.trim() || null,
+        emergency_contact_phone: ecPhone.trim() || null,
+        socials,
+      });
+      if (isBackendConfigured && profile) {
+        const { error } = await supabase.from('trainers').update({
+          display_name: name.trim(),
+          city: city.trim() || null,
+          socials,
+        }).eq('profile_id', profile.id);
+        if (error) throw error;
+      }
+      router.back();
+    } catch (e: any) {
+      notify('Changes not saved', e?.message ?? 'Check your connection and try again.');
+    } finally {
+      setSaving(false);
+    }
   }
 
   return (

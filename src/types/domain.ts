@@ -14,6 +14,8 @@ export type BookingStatus =
   | 'no_show';
 export type ReviewDirection = 'client_to_trainer' | 'trainer_to_client';
 export type SubscriptionStatus = 'active' | 'paused' | 'cancelled' | 'past_due';
+export type PaymentStatus = 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded' | 'simulation';
+export type TrainerOnboardingStatus = 'draft' | 'submitted' | 'approved' | 'rejected' | 'suspended';
 
 export interface Profile {
   id: string;
@@ -34,6 +36,7 @@ export interface Profile {
   referral_code: string | null;
   push_token: string | null;
   socials: Socials;
+  onboarding_status?: TrainerOnboardingStatus;
   weight_goal: number | null;
   created_at: string;
   updated_at: string;
@@ -70,6 +73,7 @@ export interface Trainer {
   gender: string | null;
   languages: string[];
   verified: boolean;
+  onboarding_status?: TrainerOnboardingStatus;
   rating: number;
   review_count: number;
   city: string | null;
@@ -135,6 +139,12 @@ export interface Booking {
   stripe_checkout_id: string | null;
   stripe_payment_intent: string | null;
   paid: boolean;
+  payment_status?: PaymentStatus;
+  payment_provider?: string | null;
+  quoted_at?: string;
+  trainer_fee_rate?: number;
+  trainer_platform_fee?: number;
+  trainer_payout?: number;
   created_at: string;
   updated_at: string;
 }

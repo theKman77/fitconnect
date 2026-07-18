@@ -26,6 +26,7 @@ export default function TrainerEdit() {
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => {
     getMyTrainer(profile).then((t) => {
@@ -36,7 +37,7 @@ export default function TrainerEdit() {
       setPrice(String(t.base_price));
       setSpecs(t.specialties);
       setVideoUrl(t.video_intro_url);
-    });
+    }).catch(() => setLoadError('Could not load trainer settings.'));
   }, [profile]));
 
   const toggleSpec = (s: string) =>
@@ -67,21 +68,25 @@ export default function TrainerEdit() {
     setSaving(true);
     try {
       if (isBackendConfigured) {
-        await supabase.from('trainers').update({
+        const { error } = await supabase.from('trainers').update({
           headline: headline || null,
           bio: bio || null,
           base_price: base,
           specialties: specs,
           video_intro_url: videoUrl,
         }).eq('id', trainer.id);
+        if (error) throw error;
         // Keep plan prices in step with the base rate.
         const { data: plans } = await supabase.from('session_types').select('id,kind').eq('trainer_id', trainer.id);
         for (const p of plans ?? []) {
           const mult = p.kind === 'pack' ? 4.5 : p.kind === 'subscription' ? 5.4 : 1;
-          await supabase.from('session_types').update({ price: Math.round(base * mult) }).eq('id', p.id);
+          const { error: planError } = await supabase.from('session_types').update({ price: Math.round(base * mult) }).eq('id', p.id);
+          if (planError) throw planError;
         }
       }
       router.back();
+    } catch (e: any) {
+      notify('Changes not saved', e?.message ?? 'Check your connection and try again.');
     } finally {
       setSaving(false);
     }
@@ -99,6 +104,7 @@ export default function TrainerEdit() {
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 22 }} showsVerticalScrollIndicator={false}>
+          {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
           <Txt variant="label" style={styles.label}>Headline</Txt>
           <Field value={headline} onChangeText={setHeadline} placeholder="e.g. Strength & conditioning coach" />
 

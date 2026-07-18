@@ -24,18 +24,22 @@ export default function Account() {
       async () => {
         if (!profile) return;
         setBecoming(true);
-        await becomeTrainer(profile);
-        await updateProfile({ role: 'trainer' });
-        await refreshProfile();
-        setBecoming(false);
-        router.replace('/(trainer)' as Href);
+        try {
+          await becomeTrainer(profile);
+          await refreshProfile();
+          router.replace('/(trainer)' as Href);
+        } catch (e: any) {
+          notify('Trainer setup failed', e?.message ?? 'Please try again.');
+        } finally {
+          setBecoming(false);
+        }
       },
     );
   }
 
   async function shareReferral() {
     const code = profile?.referral_code ?? 'FIT-FRIEND';
-    const message = `Join me on FitConnect — book great personal trainers on demand. Use my code ${code} and we both get a free session credit!`;
+    const message = `Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${code}.`;
     try {
       await Share.share({ message });
     } catch {
@@ -46,6 +50,14 @@ export default function Account() {
       } catch {
         notify('Your code', code);
       }
+    }
+  }
+
+  async function savePreference(patch: { high_contrast?: boolean; large_text?: boolean }) {
+    try {
+      await updateProfile(patch);
+    } catch (e: any) {
+      notify('Preference not saved', e?.message ?? 'Please try again.');
     }
   }
 
@@ -61,7 +73,7 @@ export default function Account() {
               <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={56} />
               <View style={{ flex: 1 }}>
                 <Txt variant="cardTitle">{profile?.full_name ?? 'Your name'}</Txt>
-                <Txt variant="caption" style={{ marginTop: 3 }}>Member since 2025 · Pro plan</Txt>
+                <Txt variant="caption" style={{ marginTop: 3 }}>{profile?.city ?? 'Saudi Arabia'} · FitConnect member</Txt>
               </View>
               <Txt variant="caption" color={colors.primary} style={{ marginRight: 4 }}>Edit</Txt>
               <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
@@ -70,18 +82,18 @@ export default function Account() {
         </View>
 
         <Section title="Membership & bookings">
-          <Row icon="card" label="Manage subscription" onPress={() => router.push('/membership')} />
+          <Row icon="card" label="Membership plans" value="Preview" onPress={() => router.push('/membership')} />
           <Row icon="heart" label="Favorite trainers" onPress={() => router.push('/favorites')} />
           <Row icon="time" label="Session history" onPress={() => router.push('/history')} />
-          <Row icon="wallet" label="Payment methods" value="•••• 4242" onPress={() => router.push('/payment-methods')} />
+          <Row icon="wallet" label="Payment methods" value="Not connected" onPress={() => router.push('/payment-methods')} />
         </Section>
 
         <Section title="You">
           <Row icon="stats-chart" label="Progress & measurements" onPress={() => router.push('/(tabs)/progress')} />
-          <Row icon="gift" label="Invite a friend — you both get a session credit"
+          <Row icon="gift" label="Share your FitConnect invite"
             value={profile?.referral_code ?? undefined} onPress={shareReferral} />
           <Row icon="logo-whatsapp" label="Invite via WhatsApp"
-            onPress={() => shareOnWhatsApp(`Join me on FitConnect — book great personal trainers on demand. Use my code ${profile?.referral_code ?? 'FIT-FRIEND'} and we both get a free session credit!`)} />
+            onPress={() => shareOnWhatsApp(`Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${profile?.referral_code ?? 'FIT-FRIEND'}.`)} />
         </Section>
 
         {/* Safety & accessibility */}
@@ -90,9 +102,9 @@ export default function Account() {
             value={profile?.emergency_contact_name ? `${profile.emergency_contact_name}` : 'Add'}
             onPress={() => router.push('/edit-profile')} />
           <ToggleRow icon="contrast" label="High-contrast mode"
-            value={!!profile?.high_contrast} onChange={(v) => updateProfile({ high_contrast: v })} />
+            value={!!profile?.high_contrast} onChange={(v) => savePreference({ high_contrast: v })} />
           <ToggleRow icon="text" label="Large text"
-            value={!!profile?.large_text} onChange={(v) => updateProfile({ large_text: v })} />
+            value={!!profile?.large_text} onChange={(v) => savePreference({ large_text: v })} />
         </Section>
 
         {/* Become a trainer */}

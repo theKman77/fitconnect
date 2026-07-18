@@ -8,11 +8,11 @@ import { colors, fonts, radius } from '@/theme';
 import { getBooking } from '@/lib/bookings';
 import { getTrainer } from '@/lib/api';
 import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
-import { subscribeBooking, subscribeTrainerLocation } from '@/lib/realtime';
+import { getTrainerLocation, subscribeBooking, subscribeTrainerLocation } from '@/lib/realtime';
 import { isBackendConfigured } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
 import { TrackMap } from '@/components/TrackMap';
-import { Avatar, Badge, Button, Txt } from '@/components/ui';
+import { Avatar, Button, Txt } from '@/components/ui';
 import type { Booking, Message, Trainer } from '@/types/domain';
 
 type Phase = 'confirmed' | 'en_route' | 'arriving';
@@ -36,7 +36,7 @@ export default function Track() {
   const [trainer, setTrainer] = useState<Trainer | undefined>();
   const [eta, setEta] = useState(6);
   const [phase, setPhase] = useState<Phase>('confirmed');
-  const [sharing, setSharing] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState('');
   const [trainerLoc, setTrainerLoc] = useState<{ lat: number; lng: number } | null>(null);
@@ -54,13 +54,14 @@ export default function Track() {
     if (!id) return;
     getBooking(id).then((b) => {
       setBooking(b);
+      if (b) setPhase(statusToPhase(b.status));
       if (b) getTrainer(b.trainer_id).then(setTrainer);
-    });
+    }).catch(() => setLoadError('Could not load this session. Pull back and try again.'));
     // Load chat history, then subscribe to new messages in real time.
     listMessages(id).then((m) => {
       setMessages(m);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 60);
-    });
+    }).catch(() => setLoadError('The session loaded, but chat is temporarily unavailable.'));
     const unsub = subscribeMessages(id, (msg) => {
       setMessages((cur) => {
         if (cur.some((x) => x.id === msg.id)) return cur;
@@ -92,6 +93,7 @@ export default function Track() {
   // Live mode: follow the trainer's real position on the map.
   useEffect(() => {
     if (!isBackendConfigured || !id) return;
+    getTrainerLocation(id).then((loc) => { if (loc) setTrainerLoc({ lat: loc.lat, lng: loc.lng }); }).catch(() => {});
     return subscribeTrainerLocation(id, (loc) => setTrainerLoc({ lat: loc.lat, lng: loc.lng }));
   }, [id]);
 
@@ -108,7 +110,7 @@ export default function Track() {
     return () => clearInterval(t);
   }, []);
 
-  function send() {
+  async function send() {
     const body = draft.trim();
     if (!body || !id) return;
     setDraft('');
@@ -120,14 +122,19 @@ export default function Track() {
     };
     setMessages((m) => [...m, optimistic]);
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50);
-    sendMessage(id, myId, body);
+    try {
+      await sendMessage(id, myId, body);
+    } catch {
+      setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+      notify('Message not sent', 'Check your connection and try again.');
+    }
   }
 
   function onSos() {
     confirm(
       {
         title: 'SOS — Emergency',
-        message: 'This will call emergency services (997) and share your live location with your emergency contact.',
+        message: 'This opens a phone call to Saudi emergency medical services (997). FitConnect does not automatically share your location in the web demo.',
         confirmLabel: 'Call 997',
         destructive: true,
       },
@@ -177,6 +184,7 @@ export default function Track() {
           </View>
           <Pressable style={styles.callBtn} onPress={onCall}><Ionicons name="call" size={18} color={colors.primary} /></Pressable>
         </View>
+        {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
 
         {/* Phase stepper */}
         <View style={styles.phases}>
@@ -194,13 +202,13 @@ export default function Track() {
         {/* Safety */}
         <Txt variant="label" style={styles.groupLabel}>Safety</Txt>
         <View style={styles.safetyRow}>
-          <Pressable style={styles.shareBtn} onPress={() => setSharing((s) => !s)}>
-            <Ionicons name={sharing ? 'location' : 'location-outline'} size={18} color={sharing ? colors.success : colors.textMuted} />
+          <Pressable style={styles.shareBtn} onPress={() => notify('Native app required', 'Continuous location sharing needs the future iOS/Android build. It is not active in this web demo.')}>
+            <Ionicons name="location-outline" size={18} color={colors.textMuted} />
             <View style={{ flex: 1 }}>
-              <Txt variant="bodyStrong">Share live location</Txt>
-              <Txt variant="caption">With {profile?.emergency_contact_name ?? 'your emergency contact'}</Txt>
+              <Txt variant="bodyStrong">Live safety sharing</Txt>
+              <Txt variant="caption">Coming with the native app · not active on web</Txt>
             </View>
-            {sharing && <Badge label="ON" tone="success" />}
+            <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
           </Pressable>
         </View>
         <Pressable style={styles.sos} onPress={onSos}>
@@ -239,7 +247,11 @@ export default function Track() {
           <Pressable onPress={send} style={styles.sendBtn}><Ionicons name="arrow-up" size={20} color={colors.white} /></Pressable>
         </View>
         <View style={styles.endWrap}>
-          <Button title="End session & rate" variant="secondary" onPress={() => router.replace(`/session/${id}/rate`)} />
+          {booking?.status === 'completed' ? (
+            <Button title="Rate completed session" variant="secondary" onPress={() => router.replace(`/session/${id}/rate`)} />
+          ) : (
+            <Txt variant="caption" center>Your trainer ends the session. Rating unlocks after completion.</Txt>
+          )}
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>

@@ -8,13 +8,14 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { getTrainer } from '@/lib/api';
+import { listAvailability } from '@/lib/trainer';
 import { isFavorite, toggleFavorite } from '@/lib/favorites';
 import { useAuth } from '@/context/auth';
 import { useBooking } from '@/context/booking';
-import { Avatar, Badge, Button, Card, Txt } from '@/components/ui';
+import { Avatar, Badge, Button, Card, EmptyState, Txt } from '@/components/ui';
 import { VideoPlayerModal } from '@/components/VideoPlayerModal';
 import dayjs from 'dayjs';
-import type { SessionType, TrainerDetail } from '@/types/domain';
+import type { AvailabilitySlot, SessionType, TrainerDetail } from '@/types/domain';
 
 export default function TrainerProfile() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -26,28 +27,40 @@ export default function TrainerProfile() {
   const [fav, setFav] = useState(false);
   const [tab, setTab] = useState<'pricing' | 'availability' | 'reviews'>('pricing');
   const [showVideo, setShowVideo] = useState(false);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
-      getTrainer(id).then((t) => {
+      getTrainer(id).then(async (t) => {
         setTrainer(t);
-        setSelected(t?.session_types.find((s) => s.popular) ?? t?.session_types[0]);
-      });
-      isFavorite(profile?.id ?? 'demo-client', id).then(setFav);
+        const bookable = t?.session_types.filter((s) => s.active && s.kind !== 'subscription') ?? [];
+        setSelected(bookable.find((s) => s.popular) ?? bookable[0]);
+        if (t) setAvailability(await listAvailability(t));
+      }).catch(() => setLoadError('This trainer profile could not be loaded.'));
+      isFavorite(profile?.id ?? 'demo-client', id).then(setFav).catch(() => {});
     }
   }, [id, profile?.id]);
 
   async function onToggleFavorite() {
     if (!id) return;
+    if (!profile) {
+      router.push('/(auth)/sign-in');
+      return;
+    }
     setFav(await toggleFavorite(profile?.id ?? 'demo-client', id));
   }
 
   if (!trainer) {
-    return <SafeAreaView style={styles.root}><View style={styles.center}><Txt variant="body">Loading…</Txt></View></SafeAreaView>;
+    return <SafeAreaView style={styles.root}><View style={styles.center}>{loadError ? <EmptyState icon="alert-circle" title="Profile unavailable" subtitle={loadError} actionLabel="Go back" onAction={() => router.back()} /> : <Txt variant="body">Loading…</Txt>}</View></SafeAreaView>;
   }
 
   function bookOn(date: Date) {
     if (!trainer) return;
+    if (!profile) {
+      router.push({ pathname: '/(auth)/sign-in', params: { mode: 'up' } });
+      return;
+    }
     start(trainer, trainer.session_types, selected);
     update({ scheduledAt: date });
     router.push(`/booking/${trainer.id}`);
@@ -55,6 +68,10 @@ export default function TrainerProfile() {
 
   function book() {
     if (!trainer) return;
+    if (!profile) {
+      router.push({ pathname: '/(auth)/sign-in', params: { mode: 'up' } });
+      return;
+    }
     start(trainer, trainer.session_types, selected);
     router.push(`/booking/${trainer.id}`);
   }
@@ -132,12 +149,12 @@ export default function TrainerProfile() {
 
         <View style={{ paddingHorizontal: 22, marginTop: 18 }}>
           {tab === 'pricing' && trainer.session_types.map((s) => (
-            <Card key={s.id} onPress={() => setSelected(s)} selected={selected?.id === s.id} style={{ marginBottom: 12 }}>
+            <Card key={s.id} onPress={s.kind === 'subscription' ? undefined : () => setSelected(s)} selected={s.kind !== 'subscription' && selected?.id === s.id} style={{ marginBottom: 12, opacity: s.kind === 'subscription' ? 0.6 : 1 }}>
               <View style={styles.planRow}>
                 <View style={{ flex: 1 }}>
                   <View style={styles.planNameRow}>
                     <Txt variant="bodyStrong">{s.name}</Txt>
-                    {s.popular && <Badge label="POPULAR" tone="brand" />}
+                    {s.kind === 'subscription' ? <Badge label="COMING SOON" tone="neutral" /> : s.popular && <Badge label="POPULAR" tone="brand" />}
                   </View>
                   <Txt variant="caption" style={{ marginTop: 3 }}>{s.description}</Txt>
                 </View>
@@ -151,20 +168,19 @@ export default function TrainerProfile() {
 
           {tab === 'availability' && (
             <View style={{ gap: 10 }}>
-              {Array.from({ length: 5 }).map((_, i) => {
-                const d = dayjs().add(i, 'day');
-                return (
-                  <Card key={i} onPress={() => bookOn(d.toDate())}>
+              {availability.length === 0 ? (
+                <Card><EmptyState icon="calendar-outline" title="No openings published" subtitle="This trainer has not published bookable times yet." /></Card>
+              ) : availability.slice(0, 20).map((slot) => (
+                  <Card key={slot.id} onPress={slot.booked ? undefined : () => bookOn(new Date(slot.starts_at))}>
                     <View style={styles.availRow}>
                       <View style={{ flex: 1 }}>
-                        <Txt variant="bodyStrong">{i === 0 ? 'Today' : i === 1 ? 'Tomorrow' : d.format('dddd')}</Txt>
-                        <Txt variant="caption" style={{ marginTop: 2 }}>{d.format('MMM D')} · slots from 7:00 AM</Txt>
+                        <Txt variant="bodyStrong">{dayjs(slot.starts_at).format('dddd, MMM D')}</Txt>
+                        <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(slot.starts_at).format('h:mm A')} · {dayjs(slot.ends_at).diff(dayjs(slot.starts_at), 'minute')} min</Txt>
                       </View>
-                      <Txt variant="caption" color={colors.primary}>Book this day →</Txt>
+                      {slot.booked ? <Badge label="BOOKED" tone="neutral" /> : <Txt variant="caption" color={colors.primary}>Book →</Txt>}
                     </View>
                   </Card>
-                );
-              })}
+                ))}
             </View>
           )}
 
@@ -195,7 +211,7 @@ export default function TrainerProfile() {
           <Txt variant="caption">{selected ? (selected.kind === 'subscription' ? 'MONTHLY' : selected.kind === 'pack' ? 'PACK' : 'SESSION') : 'FROM'}</Txt>
           <Txt style={styles.ctaPrice}>{formatMoney(selected?.price ?? trainer.base_price)}</Txt>
         </View>
-        <Button title="Book a session" onPress={book} fullWidth={false} style={{ flex: 1, marginLeft: 16 }} />
+        <Button title={selected ? 'Book a session' : 'Select a session'} onPress={book} disabled={!selected} fullWidth={false} style={{ flex: 1, marginLeft: 16 }} />
       </View>
     </SafeAreaView>
   );

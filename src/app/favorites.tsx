@@ -7,7 +7,7 @@ import { colors } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { listTrainers } from '@/lib/api';
 import { listFavoriteIds, onFavoritesChange } from '@/lib/favorites';
-import { Txt } from '@/components/ui';
+import { EmptyState, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
 
@@ -16,10 +16,12 @@ export default function Favorites() {
   const { profile } = useAuth();
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [ids, setIds] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listTrainers().then(setTrainers);
-    const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setIds);
+    listTrainers().then(setTrainers).catch(() => setError('Could not load favorite trainers.')).finally(() => setLoaded(true));
+    const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setIds).catch(() => setError('Could not load favorites.'));
     load();
     return onFavoritesChange(load);
   }, [profile?.id]);
@@ -39,14 +41,7 @@ export default function Favorites() {
         {favorites.map((t) => (
           <TrainerCard key={t.id} trainer={t} variant="row" onPress={() => router.push(`/trainer/${t.id}`)} />
         ))}
-        {favorites.length === 0 && (
-          <View style={styles.empty}>
-            <Ionicons name="heart-outline" size={32} color={colors.textFaint} />
-            <Txt variant="body" center style={{ marginTop: 12 }}>
-              No favorites yet. Tap the heart on a trainer's profile to save them here.
-            </Txt>
-          </View>
-        )}
+        {loaded && favorites.length === 0 && <EmptyState icon={error ? 'cloud-offline-outline' : 'heart-outline'} title={error ? 'Favorites unavailable' : 'No favorites yet'} subtitle={error ?? "Tap the heart on a trainer's profile to save them here."} actionLabel={!error ? 'Discover trainers' : undefined} onAction={!error ? () => router.push('/(tabs)/discover') : undefined} />}
       </ScrollView>
     </SafeAreaView>
   );

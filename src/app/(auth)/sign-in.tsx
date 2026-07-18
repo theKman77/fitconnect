@@ -12,7 +12,7 @@ import { notify } from '@/lib/confirm';
 export default function SignIn() {
   const router = useRouter();
   const params = useLocalSearchParams<{ mode?: string }>();
-  const { signIn, signUp, isDemo } = useAuth();
+  const { signIn, signUp, sendPasswordReset, isDemo } = useAuth();
   const [mode, setMode] = useState<'in' | 'up'>(params.mode === 'up' ? 'up' : 'in');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -41,6 +41,9 @@ export default function SignIn() {
       router.replace('/(auth)/onboarding');
       return;
     }
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return setError('Enter a valid email address.');
+    if (password.length < 8) return setError('Password must be at least 8 characters.');
+    if (mode === 'up' && name.trim().length < 2) return setError('Enter your full name.');
     setBusy(true);
     if (mode === 'in') {
       const res = await signIn(email, password);
@@ -64,6 +67,19 @@ export default function SignIn() {
     }
   }
 
+  async function forgotPassword() {
+    setError(null);
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
+      setError('Enter your email above first.');
+      return;
+    }
+    setBusy(true);
+    const result = await sendPasswordReset(email);
+    setBusy(false);
+    if (result.error) setError(result.error);
+    else notify('Check your email', 'Use the FitConnect reset link to choose a new password.');
+  }
+
   return (
     <SafeAreaView style={styles.root}>
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flex}>
@@ -85,6 +101,11 @@ export default function SignIn() {
             keyboardType="email-address" autoCapitalize="none" />
           <Field icon="lock-closed-outline" placeholder="Password" value={password} onChangeText={setPassword}
             secureTextEntry />
+          {mode === 'in' && (
+            <Pressable onPress={forgotPassword} style={{ alignSelf: 'flex-end', marginTop: -3, marginBottom: 12 }} hitSlop={8}>
+              <Txt variant="caption" color={colors.primary}>Forgot password?</Txt>
+            </Pressable>
+          )}
 
           {error && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{error}</Txt>}
 

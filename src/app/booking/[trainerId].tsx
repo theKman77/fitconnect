@@ -1,17 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
 import { colors, fonts, radius } from '@/theme';
-import { formatMoney } from '@/lib/config';
+import { config, formatMoney } from '@/lib/config';
 import { useBooking } from '@/context/booking';
 import { useAuth } from '@/context/auth';
-import { createBooking } from '@/lib/bookings';
+import { cancelBooking, createBooking } from '@/lib/bookings';
+import { listAvailability } from '@/lib/trainer';
 import { payForBooking } from '@/lib/payments';
 import { Badge, Button, Card, Txt } from '@/components/ui';
 import { Segmented } from '@/components/ui/Segmented';
+import type { AvailabilitySlot } from '@/types/domain';
 
 const STEPS = ['Plan', 'Details', 'When & where', 'Review & pay'];
 const EQUIPMENT = ['Resistance bands', 'Yoga mat', 'Dumbbells', 'Kettlebell', 'Jump rope'];
@@ -20,27 +22,32 @@ const TIME_SLOTS = [
   { label: '12:00 PM', hour: 12, minute: 0, peak: false }, { label: '3:00 PM', hour: 15, minute: 0, peak: false },
   { label: '6:00 PM', hour: 18, minute: 0, peak: true }, { label: '7:30 PM', hour: 19, minute: 30, peak: true },
 ];
-/** Next 14 days for the cross-platform date strip (native picker breaks on web). */
-const DATES = Array.from({ length: 14 }).map((_, i) => dayjs().add(i, 'day'));
-
 export default function BookingFlow() {
   const router = useRouter();
   const { profile } = useAuth();
   const { draft, update, price } = useBooking();
   const [step, setStep] = useState(0);
-  const [slot, setSlot] = useState<string | null>(null);
+  const [slot, setSlot] = useState<string | null>(() => draft.scheduledAt ? dayjs(draft.scheduledAt).format('h:mm A') : null);
   const [paying, setPaying] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
+  const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
+  const dates = Array.from({ length: 14 }).map((_, i) => dayjs().startOf('day').add(i, 'day'));
 
   const trainer = draft.trainer;
+
+  useEffect(() => {
+    if (!trainer) return;
+    listAvailability(trainer).then(setAvailability).catch(() => setPayError('Trainer availability could not be loaded. Please try again.'));
+  }, [trainer?.id]);
+
   if (!trainer) {
     return <SafeAreaView style={styles.root}><View style={styles.center}><Txt>Start from a trainer profile.</Txt></View></SafeAreaView>;
   }
 
   const canNext =
-    step === 0 ? !!draft.sessionType :
-    step === 2 ? !!draft.scheduledAt && !!slot :
+    step === 0 ? !!draft.sessionType && draft.sessionType.kind !== 'subscription' :
+    step === 2 ? !!draft.scheduledAt && !!slot && (draft.format === 'virtual' || (!!draft.addressLine.trim() && !!draft.city.trim())) :
     true;
 
   async function next() {
@@ -50,11 +57,14 @@ export default function BookingFlow() {
     setPayError(null);
     try {
       const booking = await createBooking(draft, price, profile?.id ?? 'demo-client');
-      const res = await payForBooking(booking.id, price.amountDue);
+      const res = await payForBooking(booking.id);
       if (res.ok) {
-        router.replace({ pathname: '/booking/confirmation', params: { bookingId: booking.id } });
+        router.replace({ pathname: '/booking/confirmation', params: { bookingId: booking.id, simulated: res.simulated ? '1' : '0' } });
       } else if (!res.cancelled) {
         setPayError(res.error ?? 'Payment failed. Please try again.');
+        await cancelBooking(booking.id).catch(() => {});
+      } else {
+        await cancelBooking(booking.id).catch(() => {});
       }
     } catch (e: any) {
       setPayError(e?.message ?? 'Something went wrong creating your booking.');
@@ -72,6 +82,7 @@ export default function BookingFlow() {
     // Preserve the chosen time slot (if any) on the new date.
     const cur = draft.scheduledAt ? dayjs(draft.scheduledAt) : null;
     const next = d.hour(cur?.hour() ?? 0).minute(cur?.minute() ?? 0).second(0);
+    if (availability.length > 0) setSlot(null);
     update({ scheduledAt: next.toDate() });
   }
 
@@ -79,6 +90,12 @@ export default function BookingFlow() {
     setSlot(s.label);
     const base = draft.scheduledAt ? dayjs(draft.scheduledAt) : dayjs();
     update({ isPeak: s.peak, scheduledAt: base.hour(s.hour).minute(s.minute).second(0).toDate() });
+  }
+
+  function pickPublishedSlot(s: AvailabilitySlot) {
+    setSlot(dayjs(s.starts_at).format('h:mm A'));
+    const start = dayjs(s.starts_at);
+    update({ isPeak: s.is_peak, scheduledAt: start.toDate() });
   }
 
   return (
@@ -105,12 +122,12 @@ export default function BookingFlow() {
             </View>
             <Txt variant="sectionTitle" style={{ marginTop: 26, marginBottom: 12 }}>Choose a plan</Txt>
             {draft.plans.map((s) => (
-              <Card key={s.id} onPress={() => update({ sessionType: s })} selected={draft.sessionType?.id === s.id} style={{ marginBottom: 12 }}>
+              <Card key={s.id} onPress={s.kind === 'subscription' ? undefined : () => update({ sessionType: s })} selected={s.kind !== 'subscription' && draft.sessionType?.id === s.id} style={{ marginBottom: 12, opacity: s.kind === 'subscription' ? 0.6 : 1 }}>
                 <View style={styles.planRow}>
                   <View style={{ flex: 1 }}>
                     <View style={styles.planNameRow}>
                       <Txt variant="bodyStrong">{s.name}</Txt>
-                      {s.popular && <Badge label="POPULAR" tone="brand" />}
+                      {s.kind === 'subscription' ? <Badge label="COMING SOON" tone="neutral" /> : s.popular && <Badge label="POPULAR" tone="brand" />}
                     </View>
                     <Txt variant="caption" style={{ marginTop: 3 }}>{s.description}</Txt>
                   </View>
@@ -127,28 +144,11 @@ export default function BookingFlow() {
 
             <Txt variant="label" style={styles.groupLabel}>Who is training</Txt>
             <Segmented
-              options={[{ key: 'solo', label: 'Just me' }, { key: 'friend', label: 'With a friend' }]}
-              value={draft.isSplit ? 'friend' : 'solo'}
-              onChange={(v) => update({ isSplit: v === 'friend' })}
+              options={[{ key: 'solo', label: 'Just me' }, { key: 'friend', label: 'Group · soon' }]}
+              value="solo"
+              onChange={() => update({ isSplit: false, friendEmail: '' })}
             />
-            {draft.isSplit && (
-              <>
-                <View style={styles.inputWrap}>
-                  <TextInput
-                    placeholder="Friend's email for the invite"
-                    placeholderTextColor={colors.textDim}
-                    value={draft.friendEmail}
-                    onChangeText={(t) => update({ friendEmail: t })}
-                    autoCapitalize="none"
-                    keyboardType="email-address"
-                    style={styles.input}
-                  />
-                </View>
-                <Txt variant="caption" style={{ marginTop: 8 }}>
-                  You'll each pay half at checkout. Your friend gets an invite link after booking.
-                </Txt>
-              </>
-            )}
+            <Txt variant="caption" style={{ marginTop: 8 }}>The MVP currently supports one client per booking. Group payments return after payment verification is live.</Txt>
 
             <Txt variant="label" style={styles.groupLabel}>Equipment</Txt>
             <Card>
@@ -237,7 +237,7 @@ export default function BookingFlow() {
             <Txt variant="label" style={styles.groupLabel}>Date</Txt>
             <ScrollView horizontal showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }} style={{ marginHorizontal: -22 }}>
-              {DATES.map((d) => {
+              {dates.map((d) => {
                 const on = draft.scheduledAt ? dayjs(draft.scheduledAt).isSame(d, 'day') : false;
                 return (
                   <Pressable key={d.format('YYYY-MM-DD')} onPress={() => pickDate(d)}
@@ -254,14 +254,29 @@ export default function BookingFlow() {
 
             <Txt variant="label" style={styles.groupLabel}>Time</Txt>
             <View style={styles.equipWrap}>
-              {TIME_SLOTS.map((s) => (
-                <Pressable key={s.label} onPress={() => pickSlot(s)}
-                  style={[styles.slot, slot === s.label && styles.slotOn]}>
+              {availability.length > 0 ? availability.filter((s) => draft.scheduledAt && dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'day')).map((s) => (
+                <Pressable key={s.id} onPress={s.booked ? undefined : () => pickPublishedSlot(s)}
+                  accessibilityState={{ disabled: s.booked, selected: draft.scheduledAt ? dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'minute') : false }}
+                  style={[styles.slot, slot === dayjs(s.starts_at).format('h:mm A') && styles.slotOn, s.booked && { opacity: 0.35 }]}>
+                  <Txt style={[styles.equipTxt, slot === dayjs(s.starts_at).format('h:mm A') && { color: colors.white }]}>{dayjs(s.starts_at).format('h:mm A')}</Txt>
+                  {s.is_peak && <Badge label="PEAK" tone="brand" style={{ marginTop: 4 }} />}
+                </Pressable>
+              )) : TIME_SLOTS.map((s) => {
+                const base = draft.scheduledAt ? dayjs(draft.scheduledAt) : dayjs();
+                const unavailable = base.hour(s.hour).minute(s.minute).second(0).isBefore(dayjs().add(30, 'minute'));
+                return (
+                <Pressable key={s.label} onPress={unavailable ? undefined : () => pickSlot(s)}
+                  accessibilityState={{ disabled: unavailable, selected: slot === s.label }}
+                  style={[styles.slot, slot === s.label && styles.slotOn, unavailable && { opacity: 0.35 }]}>
                   <Txt style={[styles.equipTxt, slot === s.label && { color: colors.white }]}>{s.label}</Txt>
                   {s.peak && <Badge label="PEAK" tone="brand" style={{ marginTop: 4 }} />}
                 </Pressable>
-              ))}
+                );
+              })}
             </View>
+            {availability.length > 0 && draft.scheduledAt && availability.filter((s) => dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'day')).length === 0 && (
+              <Card style={{ marginTop: 10 }}><Txt variant="caption">No published openings on this day. Choose a date with an open slot.</Txt></Card>
+            )}
             {draft.isPeak && (
               <View style={styles.peakNote}>
                 <Ionicons name="trending-up" size={16} color={colors.primary} />
@@ -295,18 +310,18 @@ export default function BookingFlow() {
 
             <Card style={{ marginTop: 12 }}>
               <View style={styles.addrRow}>
-                <View style={styles.visa}><Txt style={styles.visaTxt}>VISA</Txt></View>
-                <Txt variant="bodyStrong" style={{ flex: 1 }}>•••• 4242</Txt>
-                <Pressable onPress={() => router.push('/payment-methods')} hitSlop={8}>
-                  <Txt variant="caption" color={colors.primary}>Change</Txt>
-                </Pressable>
+                <View style={styles.visa}><Ionicons name={config.paymentsEnabled ? 'card' : 'flask'} size={17} color={colors.primary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Txt variant="bodyStrong">{config.paymentsEnabled ? 'Secure hosted checkout' : 'Demo reservation — no charge'}</Txt>
+                  <Txt variant="caption" style={{ marginTop: 2 }}>{config.paymentsEnabled ? 'Payment details are handled by the provider.' : 'The booking is saved, but no money is collected.'}</Txt>
+                </View>
               </View>
             </Card>
 
             <View style={styles.protection}>
               <Ionicons name="shield-checkmark" size={16} color={colors.success} />
               <Txt variant="caption" style={{ flex: 1 }}>
-                Free cancellation up to 4h before. No-show protection auto-rebooks you with a backup trainer.
+                Cancel before the trainer starts travelling. Payment protection activates with the licensed payment provider.
               </Txt>
             </View>
           </>
@@ -321,7 +336,7 @@ export default function BookingFlow() {
           </View>
         )}
         <Button
-          title={step < STEPS.length - 1 ? 'Continue' : `Pay ${formatMoney(price.amountDue)}`}
+          title={step < STEPS.length - 1 ? 'Continue' : config.paymentsEnabled ? `Pay ${formatMoney(price.amountDue)}` : 'Reserve demo session'}
           onPress={next}
           disabled={!canNext}
           loading={paying}

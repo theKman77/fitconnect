@@ -25,16 +25,20 @@ interface Props {
 export function InputSheet({ visible, title, fields, submitLabel = 'Save', onSubmit, onClose }: Props) {
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const value = (f: Field) => values[f.key] ?? f.initial ?? '';
   const canSubmit = fields.every((f) => value(f).trim().length > 0);
 
   async function submit() {
     setBusy(true);
+    setError(null);
     try {
       await onSubmit(Object.fromEntries(fields.map((f) => [f.key, value(f).trim()])));
       setValues({});
       onClose();
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not save. Check your connection and try again.');
     } finally {
       setBusy(false);
     }
@@ -61,6 +65,7 @@ export function InputSheet({ visible, title, fields, submitLabel = 'Save', onSub
               </View>
             </View>
           ))}
+          {error && <Txt variant="caption" color={colors.danger} style={{ marginTop: 12 }}>{error}</Txt>}
           <Button title={submitLabel} onPress={submit} disabled={!canSubmit} loading={busy} style={{ marginTop: 20 }} />
           <Pressable onPress={onClose} style={{ marginTop: 12, alignSelf: 'center' }} hitSlop={8}>
             <Txt variant="caption">Cancel</Txt>

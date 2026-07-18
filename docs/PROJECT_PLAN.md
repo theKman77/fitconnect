@@ -1,5 +1,9 @@
 # FitConnect — Build Plan
 
+## Current release reality — 2026-07-18
+
+The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
+
 A native marketplace app connecting clients with fitness trainers. Built full-scope
 from the approved design, with a real backend and test-mode payments.
 

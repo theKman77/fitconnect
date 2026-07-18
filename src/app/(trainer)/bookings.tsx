@@ -19,10 +19,16 @@ export default function TrainerBookings() {
   const { profile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const t = await getMyTrainer(profile);
-    setBookings(await listTrainerBookings(t));
+    try {
+      setError(null);
+      const t = await getMyTrainer(profile);
+      setBookings(await listTrainerBookings(t));
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not load bookings.');
+    }
   }, [profile]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
@@ -42,6 +48,7 @@ export default function TrainerBookings() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, paddingTop: 8, gap: 12 }} showsVerticalScrollIndicator={false}>
+        {error && <Txt variant="caption" color={colors.danger}>{error}</Txt>}
         {shown.map((b) => (
           <Card key={b.id} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: b.id } })}>
             <View style={styles.row}>
@@ -55,7 +62,8 @@ export default function TrainerBookings() {
                 </Txt>
               </View>
               <View style={{ alignItems: 'flex-end', gap: 5 }}>
-                <Txt variant="bodyStrong">{formatMoney(b.total - b.service_fee)}</Txt>
+                <Txt variant="bodyStrong">{formatMoney(b.trainer_payout ?? 0)}</Txt>
+                {!b.paid && <Txt variant="caption">estimate</Txt>}
                 <Badge label={STATUS_LABEL[b.status].toUpperCase()}
                   tone={b.status === 'completed' ? 'success' : b.status === 'cancelled' ? 'danger' : 'brand'} />
               </View>

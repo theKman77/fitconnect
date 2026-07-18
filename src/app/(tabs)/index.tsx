@@ -9,8 +9,7 @@ import { useBooking } from '@/context/booking';
 import { listTrainers, getTrainer } from '@/lib/api';
 import { isBackendConfigured } from '@/lib/supabase';
 import { listFavoriteIds, onFavoritesChange } from '@/lib/favorites';
-import { Avatar, Badge, TrainerRowSkeleton, Txt } from '@/components/ui';
-import { Segmented } from '@/components/ui/Segmented';
+import { Avatar, Badge, EmptyState, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
 
@@ -25,14 +24,14 @@ export default function Home() {
   const router = useRouter();
   const { profile } = useAuth();
   const { start } = useBooking();
-  const [mode, setMode] = useState<'instant' | 'subscriptions'>('instant');
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listTrainers().then((t) => { setTrainers(t); setLoading(false); });
+    listTrainers().then((t) => { setTrainers(t); setLoading(false); }).catch(() => { setError('Could not load trainers.'); setLoading(false); });
     const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setFavoriteIds);
     load();
     return onFavoritesChange(load);
@@ -41,8 +40,11 @@ export default function Home() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
+      setError(null);
       setTrainers(await listTrainers());
       setFavoriteIds(await listFavoriteIds(profile?.id ?? 'demo-client'));
+    } catch {
+      setError('Could not refresh trainers. Check your connection.');
     } finally {
       setRefreshing(false);
     }
@@ -51,18 +53,20 @@ export default function Home() {
   const firstName = (profile?.full_name ?? 'there').split(' ')[0];
   const favorite = trainers.find((t) => favoriteIds.includes(t.id)) ?? trainers[0];
   const topRated = [...trainers].sort((a, b) => b.rating - a.rating).slice(0, 6);
-  const subs = mode === 'subscriptions';
-  const monthly = (t: Trainer) => Math.round(t.base_price * 5.4);
 
   const open = (id: string) => router.push(`/trainer/${id}`);
 
   async function quickBook() {
     if (!favorite) return;
-    const detail = await getTrainer(favorite.id);
-    if (!detail) return;
-    const plans = detail.session_types;
-    start(detail, plans, plans.find((p) => p.popular) ?? plans[0]);
-    router.push(`/booking/${favorite.id}`);
+    try {
+      const detail = await getTrainer(favorite.id);
+      if (!detail) return;
+      const plans = detail.session_types.filter((p) => p.active && p.kind !== 'subscription');
+      start(detail, plans, plans.find((p) => p.popular) ?? plans[0]);
+      router.push(`/booking/${favorite.id}`);
+    } catch {
+      setError('Could not open this trainer. Please try again.');
+    }
   }
 
   return (
@@ -92,25 +96,14 @@ export default function Home() {
           <Txt variant="body" style={{ color: colors.textDim }}>Search trainers, specialties…</Txt>
         </Pressable>
 
-        {/* Mode toggle */}
-        <View style={styles.section}>
-          <Segmented
-            options={[{ key: 'instant', label: 'Book instantly' }, { key: 'subscriptions', label: 'Subscriptions' }]}
-            value={mode}
-            onChange={setMode}
-          />
-        </View>
+        {error && <View style={styles.section}><View style={styles.emptyHint}><Ionicons name="cloud-offline-outline" size={18} color={colors.danger} /><Txt variant="caption" style={{ flex: 1 }}>{error}</Txt></View></View>}
 
         {/* Connected-but-empty database hint (owner-facing) */}
         {isBackendConfigured && trainers.length === 0 && (
           <View style={styles.section}>
             <View style={styles.emptyHint}>
               <Ionicons name="server" size={18} color={colors.primary} />
-              <Txt variant="caption" style={{ flex: 1 }}>
-                Backend connected, but no trainers in the database yet. Run
-                supabase/migrations/0002_seed.sql in the Supabase SQL editor to load
-                the showcase trainers.
-              </Txt>
+              <Txt variant="caption" style={{ flex: 1 }}>No approved trainers are available yet. Check back soon.</Txt>
             </View>
           </View>
         )}
@@ -155,8 +148,7 @@ export default function Home() {
                 trainer={t}
                 variant="wide"
                 onPress={() => open(t.id)}
-                priceOverride={subs ? monthly(t) : undefined}
-                periodLabel={subs ? '/mo' : '/ session'}
+                periodLabel="/ session"
               />
             ))}
           </ScrollView>
@@ -173,8 +165,7 @@ export default function Home() {
                 trainer={t}
                 variant="row"
                 onPress={() => open(t.id)}
-                priceOverride={subs ? monthly(t) : undefined}
-                periodLabel={subs ? '/mo' : '/ session'}
+                periodLabel="/ session"
               />
             ))}
           </View>

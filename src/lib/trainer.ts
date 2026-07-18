@@ -5,9 +5,10 @@
  */
 import { supabase, isBackendConfigured } from './supabase';
 import { demoBookings } from '@/data/store';
-import type { Booking, BookingStatus, Profile, Trainer } from '@/types/domain';
+import type { AvailabilitySlot, Booking, BookingStatus, Profile, Trainer } from '@/types/domain';
 
 let demoTrainer: Trainer | null = null;
+let demoAvailability: AvailabilitySlot[] = [];
 
 function synthTrainer(profile: Profile): Trainer {
   return {
@@ -41,7 +42,8 @@ function synthTrainer(profile: Profile): Trainer {
 export async function getMyTrainer(profile: Profile | null): Promise<Trainer | null> {
   if (!profile) return null;
   if (!isBackendConfigured) return demoTrainer;
-  const { data } = await supabase.from('trainers').select('*').eq('profile_id', profile.id).maybeSingle();
+  const { data, error } = await supabase.from('trainers').select('*').eq('profile_id', profile.id).maybeSingle();
+  if (error) throw error;
   return (data as Trainer) ?? null;
 }
 
@@ -51,30 +53,8 @@ export async function becomeTrainer(profile: Profile): Promise<void> {
     demoTrainer = synthTrainer(profile);
     return;
   }
-  const { data: t } = await supabase
-    .from('trainers')
-    .insert({
-      profile_id: profile.id,
-      display_name: profile.full_name ?? 'New trainer',
-      avatar_url: profile.avatar_url,
-      headline: 'Personal trainer',
-      city: profile.city ?? 'Riyadh',
-      base_price: 200,
-      languages: ['English', 'Arabic'],
-      specialties: ['Strength', 'Conditioning'],
-      socials: profile.socials ?? {},
-    })
-    .select()
-    .single();
-
-  if (t) {
-    const trainerId = (t as Trainer).id;
-    await supabase.from('session_types').insert([
-      { trainer_id: trainerId, name: 'Single session', description: 'One-off, in-person or virtual', kind: 'single', price: 200, billing_period: 'session', sessions_included: 1, sort: 0 },
-      { trainer_id: trainerId, name: 'Pro plan', description: '8 sessions / month + chat support', kind: 'subscription', price: 1080, billing_period: 'mo', sessions_included: 8, sort: 1 },
-    ]);
-  }
-  await supabase.from('profiles').update({ role: 'trainer' }).eq('id', profile.id);
+  const { error } = await supabase.rpc('become_trainer');
+  if (error) throw error;
 }
 
 /** Bookings assigned to this trainer. */
@@ -84,11 +64,12 @@ export async function listTrainerBookings(trainer: Trainer | null): Promise<Book
     return [...demoBookings.values()].sort((a, b) => b.created_at.localeCompare(a.created_at));
   }
   if (!trainer) return [];
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('bookings')
     .select('*')
     .eq('trainer_id', trainer.id)
     .order('created_at', { ascending: false });
+  if (error) throw error;
   return (data as Booking[]) ?? [];
 }
 
@@ -98,7 +79,62 @@ export async function setTrainerOnline(trainer: Trainer | null, online: boolean)
     if (demoTrainer) demoTrainer = { ...demoTrainer, available_now: online };
     return;
   }
-  await supabase.from('trainers').update({ available_now: online }).eq('id', trainer.id);
+  const { error } = await supabase.from('trainers').update({ available_now: online }).eq('id', trainer.id);
+  if (error) throw error;
+}
+
+export async function submitTrainerApplication(): Promise<Trainer | null> {
+  if (!isBackendConfigured) {
+    if (demoTrainer) demoTrainer = { ...demoTrainer, onboarding_status: 'submitted' };
+    return demoTrainer;
+  }
+  const { data, error } = await supabase.rpc('submit_trainer_application');
+  if (error) throw error;
+  return (data as Trainer) ?? null;
+}
+
+export async function listAvailability(trainer: Trainer | null): Promise<AvailabilitySlot[]> {
+  if (!trainer) return [];
+  if (!isBackendConfigured) return demoAvailability.filter((s) => s.trainer_id === trainer.id && new Date(s.ends_at) > new Date());
+  const { data, error } = await supabase.from('availability').select('*')
+    .eq('trainer_id', trainer.id).gte('ends_at', new Date().toISOString()).order('starts_at').limit(100);
+  if (error) throw error;
+  return (data as AvailabilitySlot[]) ?? [];
+}
+
+export async function addAvailability(trainer: Trainer, startsAt: Date, durationMin = 60): Promise<void> {
+  if (startsAt.getTime() < Date.now() + 15 * 60 * 1000) throw new Error('Availability must start at least 15 minutes from now.');
+  const slot = {
+    trainer_id: trainer.id,
+    starts_at: startsAt.toISOString(),
+    ends_at: new Date(startsAt.getTime() + durationMin * 60 * 1000).toISOString(),
+    is_peak: startsAt.getHours() >= 18 && startsAt.getHours() < 20,
+    booked: false,
+  };
+  if (!isBackendConfigured) {
+    demoAvailability = [...demoAvailability, { ...slot, id: `av-${Date.now()}` }];
+    return;
+  }
+  const { error } = await supabase.from('availability').insert(slot);
+  if (error) throw error;
+}
+
+export async function removeAvailability(id: string): Promise<void> {
+  if (!isBackendConfigured) {
+    demoAvailability = demoAvailability.filter((s) => s.id !== id);
+    return;
+  }
+  const { error } = await supabase.from('availability').delete().eq('id', id).eq('booked', false);
+  if (error) throw error;
+}
+
+export interface BookingCounterpart { profile_id: string; full_name: string | null; avatar_url: string | null }
+
+export async function getBookingCounterpart(bookingId: string): Promise<BookingCounterpart | null> {
+  if (!isBackendConfigured) return { profile_id: 'demo-client', full_name: 'Demo client', avatar_url: null };
+  const { data, error } = await supabase.rpc('get_booking_counterpart', { p_booking_id: bookingId });
+  if (error) throw error;
+  return ((data as BookingCounterpart[] | null)?.[0]) ?? null;
 }
 
 /** The next status in the session lifecycle, or null if terminal. */
@@ -134,6 +170,6 @@ export function advanceLabel(status: BookingStatus): string | null {
 /** Trainer earnings from completed/paid bookings = total minus platform fee. */
 export function estimateEarnings(bookings: Booking[]): number {
   return bookings
-    .filter((b) => b.status === 'completed' || b.paid)
-    .reduce((sum, b) => sum + (b.total - b.service_fee), 0);
+    .filter((b) => b.status === 'completed' && b.paid)
+    .reduce((sum, b) => sum + (b.trainer_payout ?? 0), 0);
 }

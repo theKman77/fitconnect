@@ -9,6 +9,7 @@ interface AuthValue {
   session: Session | null;
   profile: Profile | null;
   loading: boolean;
+  authError: string | null;
   isDemo: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (
@@ -19,6 +20,8 @@ interface AuthValue {
   signOut: () => Promise<void>;
   updateProfile: (patch: Partial<Profile>) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  sendPasswordReset: (email: string) => Promise<{ error?: string }>;
+  updatePassword: (password: string) => Promise<{ error?: string }>;
 }
 
 const AuthContext = createContext<AuthValue | undefined>(undefined);
@@ -27,6 +30,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   // Demo mode: no backend yet -> behave as a signed-in demo client so the whole
   // app is explorable. Onboarding is skippable via the quiz screen.
@@ -54,7 +58,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   async function loadProfile(userId: string) {
-    const { data } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    const { data, error } = await supabase.from('profiles').select('*').eq('id', userId).single();
+    if (error) {
+      setAuthError('Your account is signed in, but its profile could not be loaded.');
+      setLoading(false);
+      return;
+    }
+    setAuthError(null);
     if (data) {
       setProfile(data as Profile);
       // Register this device for push (safe no-op on web/simulator).
@@ -68,16 +78,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       profile: isBackendConfigured ? profile : demoProfileState,
       loading,
+      authError,
       isDemo: !isBackendConfigured,
 
       async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         return { error: error?.message };
       },
 
       async signUp(email, password, fullName) {
         const { data, error } = await supabase.auth.signUp({
-          email,
+          email: email.trim(),
           password,
           options: { data: { full_name: fullName } },
         });
@@ -96,21 +107,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setDemoProfileState((p) => ({ ...p, ...patch }));
           return;
         }
-        if (!session) return;
-        const { data } = await supabase
+        if (!session) throw new Error('Sign in before updating your profile.');
+        const { data, error } = await supabase
           .from('profiles')
           .update(patch)
           .eq('id', session.user.id)
           .select()
           .single();
+        if (error) throw error;
         if (data) setProfile(data as Profile);
       },
 
       async refreshProfile() {
         if (isBackendConfigured && session) await loadProfile(session.user.id);
       },
+
+      async sendPasswordReset(email) {
+        const redirectTo = typeof window !== 'undefined' ? `${window.location.origin}/reset-password` : undefined;
+        const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo });
+        return { error: error?.message };
+      },
+
+      async updatePassword(password) {
+        const { error } = await supabase.auth.updateUser({ password });
+        return { error: error?.message };
+      },
     }),
-    [session, profile, loading, demoProfileState],
+    [session, profile, loading, authError, demoProfileState],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -31,10 +31,14 @@ export default function History() {
   const { profile } = useAuth();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allTrainers, setAllTrainers] = useState<Trainer[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listMyBookings(profile?.id ?? 'demo-client').then(setBookings);
-    listTrainers().then(setAllTrainers);
+    Promise.all([listMyBookings(profile?.id ?? 'demo-client'), listTrainers()])
+      .then(([b, t]) => { setBookings(b); setAllTrainers(t); })
+      .catch(() => setError('Could not load session history.'))
+      .finally(() => setLoaded(true));
   }, [profile?.id]);
 
   const trainerName = (id: string) => allTrainers.find((t) => t.id === id)?.display_name ?? 'Trainer';
@@ -50,6 +54,7 @@ export default function History() {
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, gap: 12 }} showsVerticalScrollIndicator={false}>
+        {error && <EmptyState icon="cloud-offline-outline" title="History unavailable" subtitle={error} />}
         {bookings.length > 0 && (
           <Txt variant="label" style={{ marginBottom: 2 }}>This session</Txt>
         )}
@@ -64,7 +69,7 @@ export default function History() {
           </Card>
         ))}
 
-        {isBackendConfigured && bookings.length === 0 && (
+        {loaded && !error && isBackendConfigured && bookings.length === 0 && (
           <EmptyState icon="time" title="No sessions yet"
             subtitle="Book your first session and it will show up here."
             actionLabel="Find a trainer" onAction={() => router.push('/(tabs)/discover')} />

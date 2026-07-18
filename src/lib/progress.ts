@@ -21,23 +21,25 @@ export async function listWeights(clientId: string): Promise<ProgressEntry[]> {
       created_at: new Date().toISOString(),
     }));
   }
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('progress_entries')
     .select('*')
     .eq('client_id', clientId)
     .order('measured_at')
     .limit(24);
+  if (error) throw error;
   return (data as ProgressEntry[]) ?? [];
 }
 
 export async function addWeight(clientId: string, kg: number): Promise<void> {
   if (!isBackendConfigured) return;
-  await supabase.from('progress_entries').insert({
+  const { error } = await supabase.from('progress_entries').insert({
     client_id: clientId,
     weight: kg,
     unit: 'kg',
     measured_at: dayjs().format('YYYY-MM-DD'),
   });
+  if (error) throw error;
 }
 
 // ---------- Personal records ----------
@@ -50,20 +52,29 @@ export const DEMO_PRS: PersonalRecord[] = [
 
 export async function listPRs(clientId: string): Promise<PersonalRecord[]> {
   if (!isBackendConfigured) return DEMO_PRS;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('personal_records')
     .select('*')
     .eq('client_id', clientId)
     .order('created_at');
+  if (error) throw error;
   return (data as PersonalRecord[]) ?? [];
 }
 
 export async function upsertPR(clientId: string, lift: string, value: number): Promise<void> {
   if (!isBackendConfigured) return;
-  await supabase.from('personal_records').upsert(
+  const { error } = await supabase.from('personal_records').upsert(
     { client_id: clientId, lift, value, unit: 'kg', achieved_at: dayjs().format('YYYY-MM-DD') },
     { onConflict: 'client_id,lift' },
   );
+  if (error) throw error;
+}
+
+export async function countReviewsGiven(clientId: string): Promise<number> {
+  if (!isBackendConfigured) return 6;
+  const { count, error } = await supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('rater_id', clientId);
+  if (error) throw error;
+  return count ?? 0;
 }
 
 // ---------- Workouts / streak ----------

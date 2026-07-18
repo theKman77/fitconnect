@@ -6,7 +6,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
-import { getMyTrainer } from '@/lib/trainer';
+import { getMyTrainer, submitTrainerApplication } from '@/lib/trainer';
 import { notify } from '@/lib/confirm';
 import { Avatar, Card, Txt } from '@/components/ui';
 import type { Trainer } from '@/types/domain';
@@ -21,8 +21,22 @@ export default function TrainerAccount() {
   }, [profile]));
 
   async function switchToClient() {
-    await updateProfile({ role: 'client' });
-    router.replace('/(tabs)');
+    try {
+      await updateProfile({ role: 'client' });
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      notify('Could not switch views', e?.message ?? 'Please try again.');
+    }
+  }
+
+  async function submitApplication() {
+    try {
+      const updated = await submitTrainerApplication();
+      setTrainer(updated);
+      notify('Application submitted', 'FitConnect can now review your trainer profile. You cannot self-verify the account.');
+    } catch (e: any) {
+      notify('Not ready to submit', e?.message ?? 'Complete your trainer profile first.');
+    }
   }
 
   return (
@@ -49,9 +63,12 @@ export default function TrainerAccount() {
           <Card padded={false}>
             <Row icon="pricetags" label="Profile, pricing & video"
               onPress={() => router.push('/trainer-edit' as any)} />
+            <Row icon="shield-checkmark" label="Application"
+              value={(trainer?.onboarding_status ?? 'draft').replace('_', ' ')}
+              onPress={trainer?.onboarding_status === 'approved' || trainer?.onboarding_status === 'submitted' ? undefined : submitApplication} />
             <Row icon="time" label="Availability"
               value={trainer?.available_now ? 'Online' : 'Offline'}
-              onPress={() => router.push('/(trainer)' as any)} />
+              onPress={() => router.push('/trainer-availability' as any)} />
             <Row icon="wallet" label="Payouts" value="Needs Moyasar"
               onPress={() => notify('Payouts', 'Payouts to your IBAN switch on with live Moyasar payments. Your earnings are tracked on the Today tab meanwhile.')} />
             <Row icon="star" label="Reviews" value={trainer ? `${trainer.rating.toFixed(1)} (${trainer.review_count})` : '—'}

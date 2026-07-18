@@ -18,7 +18,7 @@ let demoState: Subscription | null = { ...demoSub };
 
 export async function getMySubscription(clientId: string): Promise<Subscription | null> {
   if (!isBackendConfigured) return demoState;
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from('subscriptions')
     .select('*')
     .eq('client_id', clientId)
@@ -26,6 +26,7 @@ export async function getMySubscription(clientId: string): Promise<Subscription 
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle();
+  if (error) throw error;
   return (data as Subscription) ?? null;
 }
 
@@ -38,17 +39,7 @@ export async function createSubscription(
   sessionsIncluded: number,
 ): Promise<void> {
   if (!isBackendConfigured) return;
-  await supabase.from('subscriptions').insert({
-    client_id: clientId,
-    trainer_id: trainerId,
-    session_type_id: sessionTypeId,
-    status: 'active',
-    plan_name: planName,
-    price,
-    sessions_included: sessionsIncluded,
-    sessions_used: 0,
-    current_period_end: dayjs().add(1, 'month').toISOString(),
-  });
+  throw new Error('Subscriptions activate only through the future verified payment webhook.');
 }
 
 export async function setSubscriptionStatus(id: string, status: SubscriptionStatus): Promise<void> {
@@ -56,5 +47,5 @@ export async function setSubscriptionStatus(id: string, status: SubscriptionStat
     if (demoState) demoState = status === 'cancelled' ? null : { ...demoState, status };
     return;
   }
-  await supabase.from('subscriptions').update({ status }).eq('id', id);
+  throw new Error('Live membership changes require the payment provider portal.');
 }

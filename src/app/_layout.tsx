@@ -4,15 +4,14 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import {
-  useFonts,
-  Archivo_400Regular,
-  Archivo_500Medium,
-  Archivo_600SemiBold,
-  Archivo_700Bold,
-  Archivo_800ExtraBold,
-} from '@expo-google-fonts/archivo';
-import { SpaceMono_400Regular, SpaceMono_700Bold } from '@expo-google-fonts/space-mono';
+import { useFonts } from 'expo-font';
+import { Archivo_400Regular } from '@expo-google-fonts/archivo/400Regular';
+import { Archivo_500Medium } from '@expo-google-fonts/archivo/500Medium';
+import { Archivo_600SemiBold } from '@expo-google-fonts/archivo/600SemiBold';
+import { Archivo_700Bold } from '@expo-google-fonts/archivo/700Bold';
+import { Archivo_800ExtraBold } from '@expo-google-fonts/archivo/800ExtraBold';
+import { SpaceMono_400Regular } from '@expo-google-fonts/space-mono/400Regular';
+import { SpaceMono_700Bold } from '@expo-google-fonts/space-mono/700Bold';
 
 import { AuthProvider } from '@/context/auth';
 import { AccessibilityProvider } from '@/context/accessibility';
@@ -63,6 +62,7 @@ export default function RootLayout() {
               <Stack.Screen name="session/[id]/rate" options={{ presentation: 'modal' }} />
               <Stack.Screen name="trainer-session/[id]" />
               <Stack.Screen name="trainer-edit" />
+              <Stack.Screen name="trainer-availability" />
               <Stack.Screen name="membership" />
             </Stack>
           </BookingProvider>

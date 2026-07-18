@@ -28,13 +28,14 @@ export default function Rate() {
   const [busy, setBusy] = useState(false);
   const [booking, setBooking] = useState<Booking | undefined>();
   const [trainer, setTrainer] = useState<Trainer | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     getBooking(id).then((b) => {
       setBooking(b);
       if (b) getTrainer(b.trainer_id).then(setTrainer);
-    });
+    }).catch(() => setError('Could not load this completed session.'));
   }, [id]);
 
   const trainerName = trainer?.display_name.split(' ')[0] ?? 'your trainer';
@@ -52,26 +53,37 @@ export default function Rate() {
   }
 
   async function submit() {
-    setBusy(true);
-    if (isBackendConfigured && id && profile) {
-      let photoUrl: string | null = null;
-      if (photo) {
-        try { photoUrl = await uploadFile('progress', profile.id, photo, extFor(photo, 'image')); } catch {}
-      }
-      await supabase.from('reviews').insert({
-        booking_id: id,
-        rater_id: profile.id,
-        ratee_id: trainer?.profile_id ?? profile.id,
-        direction: 'client_to_trainer',
-        rating,
-        comment: comment || null,
-        tags,
-        photo_url: photoUrl,
-      });
-    } else {
-      await new Promise((r) => setTimeout(r, 500));
+    if (booking?.status !== 'completed') {
+      setError('Ratings unlock only after the trainer completes the session.');
+      return;
     }
-    router.replace('/(tabs)');
+    setBusy(true);
+    setError(null);
+    try {
+      if (isBackendConfigured && id && profile) {
+        if (!trainer?.profile_id) throw new Error('Trainer account is unavailable.');
+        let photoUrl: string | null = null;
+        if (photo) photoUrl = await uploadFile('progress', profile.id, photo, extFor(photo, 'image'));
+        const { error: insertError } = await supabase.from('reviews').insert({
+          booking_id: id,
+          rater_id: profile.id,
+          ratee_id: trainer.profile_id,
+          direction: 'client_to_trainer',
+          rating,
+          comment: comment.trim() || null,
+          tags,
+          photo_url: photoUrl,
+        });
+        if (insertError) throw insertError;
+      } else {
+        await new Promise((r) => setTimeout(r, 500));
+      }
+      router.replace('/(tabs)');
+    } catch (e: any) {
+      setError(e?.message ?? 'Could not save your rating. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -142,7 +154,8 @@ export default function Rate() {
       </ScrollView>
 
       <View style={styles.footer}>
-        <Button title="Submit rating" onPress={submit} disabled={rating === 0} loading={busy} />
+        {error && <Txt variant="caption" color={colors.danger} center style={{ marginBottom: 10 }}>{error}</Txt>}
+        <Button title="Submit rating" onPress={submit} disabled={rating === 0 || booking?.status !== 'completed'} loading={busy} />
       </View>
     </SafeAreaView>
   );

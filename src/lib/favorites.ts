@@ -6,6 +6,7 @@ import { supabase, isBackendConfigured } from './supabase';
 
 const demoFavorites = new Set<string>(['t-maya']);
 const listeners = new Set<() => void>();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 function notify() {
   listeners.forEach((fn) => fn());
@@ -19,7 +20,9 @@ export function onFavoritesChange(fn: () => void): () => void {
 
 export async function listFavoriteIds(clientId: string): Promise<string[]> {
   if (!isBackendConfigured) return [...demoFavorites];
-  const { data } = await supabase.from('favorites').select('trainer_id').eq('client_id', clientId);
+  if (!UUID_RE.test(clientId)) return [];
+  const { data, error } = await supabase.from('favorites').select('trainer_id').eq('client_id', clientId);
+  if (error) throw error;
   return (data ?? []).map((r: { trainer_id: string }) => r.trainer_id);
 }
 
@@ -37,16 +40,20 @@ export async function toggleFavorite(clientId: string, trainerId: string): Promi
     notify();
     return now;
   }
-  const { data } = await supabase
+  if (!UUID_RE.test(clientId)) throw new Error('Sign in to save favorite trainers.');
+  const { data, error: readError } = await supabase
     .from('favorites')
     .select('trainer_id')
     .eq('client_id', clientId)
     .eq('trainer_id', trainerId)
     .maybeSingle();
+  if (readError) throw readError;
   if (data) {
-    await supabase.from('favorites').delete().eq('client_id', clientId).eq('trainer_id', trainerId);
+    const { error } = await supabase.from('favorites').delete().eq('client_id', clientId).eq('trainer_id', trainerId);
+    if (error) throw error;
     return false;
   }
-  await supabase.from('favorites').insert({ client_id: clientId, trainer_id: trainerId });
+  const { error } = await supabase.from('favorites').insert({ client_id: clientId, trainer_id: trainerId });
+  if (error) throw error;
   return true;
 }

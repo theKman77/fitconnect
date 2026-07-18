@@ -13,11 +13,12 @@ import type { Booking } from '@/types/domain';
 
 export default function Confirmation() {
   const router = useRouter();
-  const { bookingId } = useLocalSearchParams<{ bookingId: string }>();
+  const { bookingId, simulated } = useLocalSearchParams<{ bookingId: string; simulated?: string }>();
   const [booking, setBooking] = useState<Booking | undefined>();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (bookingId) getBooking(bookingId).then(setBooking);
+    if (bookingId) getBooking(bookingId).then(setBooking).catch(() => setError('We saved the reservation, but could not reload its details.'));
   }, [bookingId]);
 
   return (
@@ -26,23 +27,26 @@ export default function Confirmation() {
         <LinearGradient colors={[colors.primary, colors.primaryDeep]} style={styles.check}>
           <Ionicons name="checkmark" size={48} color={colors.white} />
         </LinearGradient>
-        <Txt variant="screenTitle" center style={{ marginTop: 24 }}>You're booked!</Txt>
+        <Txt variant="screenTitle" center style={{ marginTop: 24 }}>{simulated === '1' ? 'Demo session reserved' : "You're booked!"}</Txt>
         {booking?.scheduled_at && (
           <Txt variant="body" center style={{ marginTop: 8 }}>
-            {dayjs(booking.scheduled_at).format('dddd, MMMM D')} · confirmed
+            {dayjs(booking.scheduled_at).format('dddd, MMMM D · h:mm A')}
           </Txt>
         )}
         <View style={styles.recap}>
-          <Ionicons name="shield-checkmark" size={16} color={colors.success} />
+          <Ionicons name={simulated === '1' ? 'flask' : 'shield-checkmark'} size={16} color={simulated === '1' ? colors.primary : colors.success} />
           <Txt variant="caption" style={{ flex: 1 }}>
-            A confirmation and prep details are on the way. You can message your trainer anytime.
+            {simulated === '1'
+              ? 'This reservation is stored in the database for testing. No payment was collected.'
+              : 'Your payment is being verified. You can message your trainer from the session page.'}
           </Txt>
         </View>
+        {error && <Txt variant="caption" color={colors.danger} center style={{ marginTop: 12 }}>{error}</Txt>}
       </View>
 
       <View style={styles.actions}>
         <Button
-          title="Track your trainer"
+          title={booking?.format === 'virtual' ? 'Open session' : 'View session & chat'}
           icon="navigate"
           onPress={() => booking && router.replace(`/session/${booking.id}/track`)}
         />
@@ -68,7 +72,6 @@ export default function Confirmation() {
           icon="logo-whatsapp"
           onPress={() => shareOnWhatsApp('Just booked a personal trainer on FitConnect 💪 Try it — trainers come to you, in person or virtual.')}
         />
-        <Button title="View my subscription" variant="secondary" onPress={() => router.replace('/membership')} />
         <Button title="Back to home" variant="ghost" onPress={() => router.replace('/(tabs)')} />
       </View>
     </SafeAreaView>

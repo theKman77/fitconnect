@@ -19,7 +19,7 @@ export interface TrainerFilter {
 export async function listTrainers(filter: TrainerFilter = {}): Promise<Trainer[]> {
   let rows: Trainer[];
   if (isBackendConfigured) {
-    let q = supabase.from('trainers').select('*').order('rating', { ascending: false });
+    let q = supabase.from('trainers').select('*').order('rating', { ascending: false }).limit(50);
     if (filter.availableNow) q = q.eq('available_now', true);
     if (filter.minRating) q = q.gte('rating', filter.minRating);
     if (filter.gender) q = q.eq('gender', filter.gender);
@@ -49,21 +49,24 @@ export async function listTrainers(filter: TrainerFilter = {}): Promise<Trainer[
 export async function getTrainer(id: string): Promise<TrainerDetail | undefined> {
   if (!isBackendConfigured) return seedDetail(id);
 
-  const { data: t } = await supabase.from('trainers').select('*').eq('id', id).single();
+  const { data: t, error: trainerError } = await supabase.from('trainers').select('*').eq('id', id).single();
+  if (trainerError) throw trainerError;
   if (!t) return undefined;
-  const { data: st } = await supabase
+  const { data: st, error: plansError } = await supabase
     .from('session_types')
     .select('*')
     .eq('trainer_id', id)
     .eq('active', true)
     .order('sort');
-  const { data: rv } = await supabase
+  if (plansError) throw plansError;
+  const { data: rv, error: reviewsError } = await supabase
     .from('reviews')
     .select('*')
     .eq('ratee_id', (t as Trainer).profile_id)
     .eq('direction', 'client_to_trainer')
     .order('created_at', { ascending: false })
     .limit(20);
+  if (reviewsError) throw reviewsError;
   return {
     ...(t as Trainer),
     session_types: st ?? [],
