@@ -7,7 +7,7 @@
     "icon": "./assets/images/icon.png",
     "scheme": "fitconnect",
     "userInterfaceStyle": "dark",
-    "backgroundColor": "#0B0B0D",
+    "backgroundColor": "#08090B",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "app.fitconnect.client",
@@ -19,7 +19,7 @@
     "android": {
       "package": "app.fitconnect.client",
       "adaptiveIcon": {
-        "backgroundColor": "#0B0B0D",
+        "backgroundColor": "#08090B",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
@@ -39,7 +39,7 @@
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#0B0B0D",
+          "backgroundColor": "#08090B",
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 160
         }

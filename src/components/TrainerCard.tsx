@@ -43,14 +43,14 @@ export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride,
     return (
       <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
         <View style={styles.rowThumb}>
-          <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={72} />
+          <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={88} />
         </View>
         <View style={styles.rowBody}>
           <View style={styles.rowTop}>
             <Txt variant="cardTitle" numberOfLines={1} style={{ flex: 1 }}>{trainer.display_name}</Txt>
             {trainer.verified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
           </View>
-          <Txt variant="caption" numberOfLines={1}>{trainer.headline}</Txt>
+          <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{trainer.headline}</Txt>
           <View style={styles.rowMeta}>
             {rating}
             <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {periodLabel}</Txt></Txt>
@@ -62,25 +62,22 @@ export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride,
 
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.wide, pressed && styles.pressed]}>
-      <View>
-        <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={148} />
+      <View style={styles.photoWrap}>
+        <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={174} />
+        <LinearGradient colors={['transparent', 'rgba(8,9,11,0.88)']} style={styles.photoShade} />
         {trainer.available_now && (
-          <Badge label="AVAILABLE NOW" tone="success" style={styles.availBadge} />
+          <Badge label="AVAILABLE" tone="success" style={styles.availBadge} />
         )}
+        <View style={styles.photoRating}>{rating}</View>
       </View>
       <View style={styles.wideBody}>
         <View style={styles.rowTop}>
           <Txt variant="cardTitle" numberOfLines={1} style={{ flex: 1 }}>{trainer.display_name}</Txt>
           {trainer.verified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
         </View>
-        <Txt variant="caption" numberOfLines={1}>{trainer.headline}</Txt>
-        <View style={styles.chipRow}>
-          {trainer.specialties.slice(0, 2).map((s) => (
-            <View key={s} style={styles.miniChip}><Txt style={styles.miniChipTxt}>{s}</Txt></View>
-          ))}
-        </View>
+        <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{trainer.headline}</Txt>
         <View style={styles.rowMeta}>
-          {rating}
+          <Txt style={styles.specialty}>{trainer.specialties[0] ?? 'Personal training'}</Txt>
           <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {periodLabel}</Txt></Txt>
         </View>
       </View>
@@ -89,17 +86,20 @@ export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride,
 }
 
 const styles = StyleSheet.create({
-  pressed: { opacity: 0.9 },
+  pressed: { opacity: 0.94, transform: [{ scale: 0.988 }] },
   wide: {
-    width: 216,
+    width: 248,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
     borderRadius: radius.xxl,
     overflow: 'hidden',
   },
-  availBadge: { position: 'absolute', top: 10, left: 10 },
-  wideBody: { padding: 13, paddingBottom: 14 },
+  photoWrap: { position: 'relative' },
+  photoShade: { ...StyleSheet.absoluteFillObject, top: '45%' },
+  photoRating: { position: 'absolute', left: 13, bottom: 11 },
+  availBadge: { position: 'absolute', top: 12, left: 12 },
+  wideBody: { padding: 15, paddingBottom: 16 },
   chipRow: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
   miniChip: {
     backgroundColor: colors.surfaceElevated,
@@ -108,20 +108,21 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   miniChipTxt: { fontFamily: fonts.medium, fontSize: 10, color: colors.textMuted },
-  rowMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 11 },
+  rowMeta: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 13, gap: 8 },
   ratingRow: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   rating: { fontFamily: fonts.bold, fontSize: 13, color: colors.textPrimary },
-  price: { fontFamily: fonts.bold, fontSize: 15, color: colors.textPrimary },
+  price: { fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary },
+  specialty: { flex: 1, fontFamily: fonts.medium, fontSize: 10, color: colors.primary, textTransform: 'uppercase', letterSpacing: 0.7 },
   row: {
     flexDirection: 'row',
-    gap: 12,
+    gap: 14,
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.xl,
-    padding: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.xxl,
+    padding: 9,
   },
-  rowThumb: { width: 72, height: 72, borderRadius: radius.md, overflow: 'hidden' },
+  rowThumb: { width: 88, height: 88, borderRadius: radius.lg, overflow: 'hidden' },
   rowBody: { flex: 1, justifyContent: 'center' },
   rowTop: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

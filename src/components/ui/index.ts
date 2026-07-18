@@ -8,3 +8,4 @@ export { Avatar } from './Avatar';
 export { Skeleton, TrainerRowSkeleton } from './Skeleton';
 export { EmptyState } from './EmptyState';
 export { InputSheet } from './InputSheet';
+export { Brand } from './Brand';

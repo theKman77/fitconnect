@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -24,6 +24,7 @@ const DEMO_WORKOUTS = [
 ];
 
 export default function Progress() {
+  const router = useRouter();
   const { profile, updateProfile } = useAuth();
   const [weights, setWeights] = useState<ProgressEntry[]>([]);
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
@@ -90,6 +91,11 @@ export default function Progress() {
   const hours = isBackendConfigured
     ? Math.round(completed.reduce((s, b) => s + (b.duration_min || 60), 0) / 60)
     : 36;
+  const sessionsThisWeek = isBackendConfigured
+    ? completed.filter((b) => dayjs(b.scheduled_at ?? b.created_at).isSame(dayjs(), 'week')).length
+    : 2;
+  const missionTarget = 3;
+  const missionProgress = Math.min(1, sessionsThisWeek / missionTarget);
 
   const trainerName = (id: string) => allTrainers.find((t) => t.id === id)?.display_name ?? 'your trainer';
 
@@ -107,7 +113,8 @@ export default function Progress() {
         {/* Level + streak hero */}
         <View style={styles.section}>
           <View style={styles.hero}>
-            <LinearGradient colors={[colors.primary, colors.primaryDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <LinearGradient colors={[colors.surfaceHigh, '#21130F', colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <View style={styles.heroGlow} />
             <View style={styles.heroRow}>
               <View style={{ flex: 1 }}>
                 <Txt style={styles.heroLevel}>Level {level.level} · {level.name}</Txt>
@@ -134,6 +141,24 @@ export default function Progress() {
           <Stat icon="barbell" value={String(stats.sessions)} label="Sessions" />
           <Stat icon="time" value={`${hours}h`} label="Trained" />
           <Stat icon="flame" value={String(stats.streakWeeks)} label="Week streak" />
+        </View>
+
+        <View style={styles.section}>
+          <Pressable style={styles.mission} onPress={() => router.push('/(tabs)/discover')}>
+            <View style={styles.missionTop}>
+              <View style={styles.missionIcon}><Ionicons name="flag" size={19} color={colors.primary} /></View>
+              <View style={{ flex: 1 }}>
+                <Txt style={styles.missionEyebrow}>THIS WEEK'S MISSION</Txt>
+                <Txt style={styles.missionTitle}>{sessionsThisWeek >= missionTarget ? 'Mission complete' : `Move ${missionTarget} times`}</Txt>
+              </View>
+              <View style={styles.reward}><Ionicons name="sparkles" size={12} color={colors.warm} /><Txt style={styles.rewardText}>150 XP</Txt></View>
+            </View>
+            <View style={styles.missionTrack}><View style={[styles.missionFill, { width: `${Math.max(4, missionProgress * 100)}%` }]} /></View>
+            <View style={styles.missionBottom}>
+              <Txt style={styles.missionMeta}>{Math.min(sessionsThisWeek, missionTarget)} of {missionTarget} sessions</Txt>
+              <Txt style={styles.missionLink}>{sessionsThisWeek >= missionTarget ? 'Explore next goal' : 'Book a session'}  →</Txt>
+            </View>
+          </Pressable>
         </View>
 
         {/* Achievements */}
@@ -355,22 +380,36 @@ const styles = StyleSheet.create({
   sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
   link: { fontFamily: fonts.bold, fontSize: 13, color: colors.primary },
 
-  hero: { borderRadius: radius.xl, overflow: 'hidden', padding: 18 },
+  hero: { borderRadius: radius.xxl, overflow: 'hidden', padding: 20, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.primaryBorder },
+  heroGlow: { position: 'absolute', width: 180, height: 180, borderRadius: 90, right: -70, top: -95, backgroundColor: colors.primaryTintStrong },
   heroRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   heroLevel: { fontFamily: fonts.extrabold, fontSize: 22, color: colors.white },
   heroSub: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
   xpRing: {
-    width: 62, height: 62, borderRadius: 31, borderWidth: 3, borderColor: 'rgba(255,255,255,0.6)',
-    alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(255,255,255,0.12)',
+    width: 66, height: 66, borderRadius: 33, borderWidth: 3, borderColor: colors.primary,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint,
   },
   xpTxt: { fontFamily: fonts.extrabold, fontSize: 16, color: colors.white },
   xpLbl: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 1, color: 'rgba(255,255,255,0.8)' },
   heroTrack: { height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginTop: 16 },
-  heroFill: { height: '100%', backgroundColor: colors.white, borderRadius: 4 },
+  heroFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 4 },
   heroNext: { fontFamily: fonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 8 },
 
   statsRow: { flexDirection: 'row', gap: 10 },
   statVal: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.textPrimary, marginTop: 8 },
+
+  mission: { padding: 17, borderRadius: radius.xxl, backgroundColor: colors.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
+  missionTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  missionIcon: { width: 40, height: 40, borderRadius: 14, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  missionEyebrow: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 1.1, color: colors.primary },
+  missionTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.textPrimary, marginTop: 3 },
+  reward: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 8, paddingVertical: 6, borderRadius: radius.pill, backgroundColor: 'rgba(255,179,107,0.11)' },
+  rewardText: { fontFamily: fonts.bold, fontSize: 9, color: colors.warm },
+  missionTrack: { height: 7, borderRadius: 4, backgroundColor: colors.surfaceHigh, overflow: 'hidden', marginTop: 16 },
+  missionFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
+  missionBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 9 },
+  missionMeta: { fontFamily: fonts.medium, fontSize: 10, color: colors.textDim },
+  missionLink: { fontFamily: fonts.bold, fontSize: 11, color: colors.primary },
 
   badge: { width: 92, borderRadius: radius.lg, borderWidth: 1, padding: 12, alignItems: 'center', gap: 8, minHeight: 84 },
   badgeOn: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },

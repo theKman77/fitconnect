@@ -1,6 +1,6 @@
 import { ReactNode } from 'react';
 import { Pressable, StyleSheet, View, ViewStyle } from 'react-native';
-import { colors, radius } from '@/theme';
+import { colors, radius, shadow } from '@/theme';
 
 interface Props {
   children: ReactNode;
@@ -32,18 +32,19 @@ export function Card({ children, onPress, style, padded = true, selected }: Prop
 const styles = StyleSheet.create({
   card: {
     backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderRadius: radius.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.borderSubtle,
+    borderRadius: radius.xl,
     overflow: 'hidden',
+    ...shadow.card,
   },
-  padded: { padding: 16 },
-  pressed: { opacity: 0.9 },
+  padded: { padding: 18 },
+  pressed: { opacity: 0.94, transform: [{ scale: 0.992 }] },
   selectedRing: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
     borderWidth: 2,
     borderColor: colors.primary,
-    borderRadius: radius.lg,
+    borderRadius: radius.xl,
   },
 });

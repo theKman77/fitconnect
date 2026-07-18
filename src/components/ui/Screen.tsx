@@ -32,6 +32,7 @@ export function Screen({
           contentContainerStyle={[inner, contentStyle]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
+          contentInsetAdjustmentBehavior="automatic"
           {...scrollProps}
         >
           {children}
@@ -46,5 +47,5 @@ export function Screen({
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   flex: { flex: 1 },
-  padded: { paddingHorizontal: 22 },
+  padded: { paddingHorizontal: 20 },
 });

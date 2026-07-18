@@ -63,6 +63,7 @@ export default function RootLayout() {
               <Stack.Screen name="trainer-session/[id]" />
               <Stack.Screen name="trainer-edit" />
               <Stack.Screen name="trainer-availability" />
+              <Stack.Screen name="integrations" />
               <Stack.Screen name="membership" />
             </Stack>
           </BookingProvider>

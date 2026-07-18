@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-07-19 — FitConnect 2.0 visual identity and integrations
+
+### Brand and experience
+
+- Replaced the generic dumbbell with a distinctive interlocking-link mark across the app icon, splash screen, favicon, and in-app wordmark.
+- Rebuilt the dark theme with graphite depth, warmer orange gradients, quieter borders, larger typography, softer cards, and clearer hierarchy.
+- Redesigned the welcome experience for phone and desktop, including a branded momentum visual and above-the-fold conversion actions.
+- Redesigned the client home into a responsive marketplace dashboard with quick actions, one-tap rebooking, curated coaches, and a bounded desktop layout.
+- Simplified trainer cards and rebuilt the account/navigation surfaces to feel less dense and template-like.
+- Upgraded Progress with a weekly mission, live completion state, XP reward, and clearer momentum framing.
+
+### Integrations
+
+- Added a dedicated Integrations Hub that distinguishes working web integrations, owner-setup integrations, and mobile-build integrations.
+- Surfaced WhatsApp, Calendar, social profiles, Google sign-in, Moyasar/mada/Apple Pay, Apple Health/Health Connect, live location, push, and Sign in with Apple with honest readiness states.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized browser smoke test passes eight critical routes, including the new Integrations Hub.
+
 ## 2026-07-18 — Post-audit production-hardening milestone
 
 ### Security and backend

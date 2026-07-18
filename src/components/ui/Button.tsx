@@ -60,7 +60,7 @@ export function Button({
     >
       {isPrimary ? (
         <LinearGradient
-          colors={[colors.primary, colors.primaryDeep]}
+          colors={[colors.primaryLight, colors.primary, colors.primaryDeep]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={StyleSheet.absoluteFill}
@@ -79,8 +79,8 @@ function textColor(v: Variant): string {
 
 const styles = StyleSheet.create({
   base: {
-    height: 54,
-    borderRadius: radius.lg,
+    minHeight: 56,
+    borderRadius: radius.xl,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
@@ -88,10 +88,10 @@ const styles = StyleSheet.create({
   },
   fullWidth: { alignSelf: 'stretch' },
   row: { flexDirection: 'row', alignItems: 'center' },
-  label: { fontFamily: fonts.bold, fontSize: 16 },
-  secondary: { backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border },
+  label: { fontFamily: fonts.bold, fontSize: 15, letterSpacing: -0.1 },
+  secondary: { backgroundColor: colors.surfaceElevated, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.borderStrong },
   ghost: { backgroundColor: 'transparent' },
   danger: { backgroundColor: colors.dangerTint, borderWidth: 1, borderColor: colors.danger },
   disabled: { opacity: 0.45 },
-  pressed: { opacity: 0.85, transform: [{ scale: 0.99 }] },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
 });

@@ -1,35 +1,38 @@
 /**
  * FitConnect design system.
- * Tokens extracted directly from the approved design (FitConnect.html).
- * Dark-first. Primary accent is the orange #FF5A1F.
+ * FitConnect 2.0 design system.
+ * Dark-first, with a warm high-energy orange and quieter graphite surfaces.
  */
 
 export const colors = {
   // Surfaces
-  bg: '#0B0B0D',
-  surface: '#141417',
-  surfaceElevated: '#1B1B1F',
-  surfaceHigh: '#26262B',
+  bg: '#08090B',
+  bgSoft: '#0C0E12',
+  surface: '#111318',
+  surfaceElevated: '#181B21',
+  surfaceHigh: '#23272F',
 
   // Borders / hairlines
-  border: 'rgba(255,255,255,0.08)',
-  borderStrong: 'rgba(255,255,255,0.14)',
-  borderSubtle: 'rgba(255,255,255,0.06)',
+  border: 'rgba(255,255,255,0.075)',
+  borderStrong: 'rgba(255,255,255,0.15)',
+  borderSubtle: 'rgba(255,255,255,0.045)',
 
   // Brand
-  primary: '#FF5A1F',
-  primaryLight: '#FF9A5F',
-  primaryDeep: '#FF7A3F',
-  primaryTint: 'rgba(255,90,31,0.10)',
-  primaryTintStrong: 'rgba(255,90,31,0.18)',
-  primaryBorder: 'rgba(255,90,31,0.22)',
+  primary: '#FF5C35',
+  primaryLight: '#FF9B73',
+  primaryDeep: '#DF3E16',
+  primaryTint: 'rgba(255,92,53,0.11)',
+  primaryTintStrong: 'rgba(255,92,53,0.20)',
+  primaryBorder: 'rgba(255,92,53,0.28)',
+  brandGlow: 'rgba(255,92,53,0.34)',
+  warm: '#FFB36B',
 
   // Text
-  textPrimary: '#F5F5F4',
-  textSecondary: '#C9C9CE',
-  textMuted: '#9A9AA0',
-  textDim: '#7A7A80',
-  textFaint: '#5A5A60',
+  textPrimary: '#F7F5F2',
+  textSecondary: '#C7C8CD',
+  textMuted: '#9699A2',
+  textDim: '#737780',
+  textFaint: '#565A64',
 
   // Semantic
   success: '#3BD16F',
@@ -75,17 +78,17 @@ export const spacing = {
 
 export const radius = {
   sm: 12,
-  md: 14,
-  lg: 16,
-  xl: 18,
-  xxl: 20,
+  md: 16,
+  lg: 20,
+  xl: 24,
+  xxl: 28,
   pill: 999,
 } as const;
 
 /** Common text presets used across screens. */
 export const typography = {
-  screenTitle: { fontFamily: fonts.extrabold, fontSize: 26, color: colors.textPrimary, letterSpacing: -0.5 },
-  sectionTitle: { fontFamily: fonts.bold, fontSize: 19, color: colors.textPrimary, letterSpacing: -0.3 },
+  screenTitle: { fontFamily: fonts.extrabold, fontSize: 30, color: colors.textPrimary, letterSpacing: -1.1, lineHeight: 34 },
+  sectionTitle: { fontFamily: fonts.bold, fontSize: 20, color: colors.textPrimary, letterSpacing: -0.45 },
   cardTitle: { fontFamily: fonts.bold, fontSize: 16, color: colors.textPrimary },
   body: { fontFamily: fonts.regular, fontSize: 15, color: colors.textSecondary, lineHeight: 22 },
   bodyStrong: { fontFamily: fonts.semibold, fontSize: 15, color: colors.textPrimary },
@@ -97,12 +100,9 @@ export const typography = {
 
 export const shadow = {
   card: {
-    shadowColor: '#000',
-    shadowOpacity: 0.35,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 6,
+    boxShadow: '0 16px 44px rgba(0,0,0,0.30)',
   },
+  glow: { boxShadow: '0 14px 40px rgba(255,92,53,0.20)' },
 } as const;
 
 export const theme = { colors, fonts, spacing, radius, typography, shadow };

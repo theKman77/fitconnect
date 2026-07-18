@@ -1,6 +1,8 @@
 # FitConnect — Build Plan
 
-## Current release reality — 2026-07-18
+## Current release reality — 2026-07-19
+
+The FitConnect 2.0 visual milestone now includes a new interlocking-link identity, rebuilt welcome and responsive home experiences, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. The next visual wave is the screen-by-screen redesign of Discover, trainer profile, booking, trainer dashboard, and Arabic/RTL foundations.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 

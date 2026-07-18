@@ -1,29 +1,27 @@
 /**
- * Generates FitConnect app icons + splash from a vector dumbbell mark.
+ * Generates FitConnect app icons + splash from the interlocking-link mark.
  * Run: node scripts/generate-icons.js
  */
 const sharp = require('sharp');
 const path = require('path');
 
 const OUT = path.join(__dirname, '..', 'assets', 'images');
-const BG = '#0B0B0D';
+const BG = '#08090B';
 
-/** Dumbbell mark, centered in a 512x512 viewBox. `fill` overrides the gradient. */
+/** Two interlocking links: motion, trust and connection without a generic dumbbell. */
 function mark(fill) {
-  const paint = fill ?? 'url(#g)';
+  const paint = fill ?? 'url(#brand)';
   return `
     <defs>
-      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#FF5A1F"/>
-        <stop offset="100%" stop-color="#FF9A5F"/>
+      <linearGradient id="brand" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stop-color="#FF9B73"/>
+        <stop offset="45%" stop-color="#FF5C35"/>
+        <stop offset="100%" stop-color="#DF3E16"/>
       </linearGradient>
     </defs>
-    <g fill="${paint}">
-      <rect x="140" y="240" width="232" height="32" rx="16"/>
-      <rect x="106" y="176" width="48"  height="160" rx="22"/>
-      <rect x="358" y="176" width="48"  height="160" rx="22"/>
-      <rect x="58"  y="206" width="34"  height="100" rx="16"/>
-      <rect x="420" y="206" width="34"  height="100" rx="16"/>
+    <g fill="none" stroke="${paint}" stroke-width="52" stroke-linecap="round">
+      <rect x="86" y="166" width="224" height="180" rx="90" transform="rotate(-18 198 256)"/>
+      <rect x="202" y="166" width="224" height="180" rx="90" transform="rotate(18 314 256)"/>
     </g>`;
 }
 
@@ -44,9 +42,10 @@ async function write(name, buffer) {
 
 (async () => {
   // App icon: dark bg, generous margin (iOS rounds corners itself).
-  await write('icon.png', svg({ size: 1024, bg: BG, markScale: 1.3 }));
+  await write('icon.png', svg({ size: 1024, bg: BG, markScale: 1.12 }));
   // Splash: transparent, shown on the dark splash background.
-  await write('splash-icon.png', svg({ size: 600, markScale: 1.0 }));
+  await write('splash-icon.png', svg({ size: 600, markScale: 0.82 }));
+  await write('brand-mark.png', svg({ size: 512, markScale: 0.82 }));
   // Android adaptive: content must sit inside the middle ~60% safe zone.
   await write('android-icon-foreground.png', svg({ size: 1024, markScale: 1.0 }));
   await write('android-icon-monochrome.png', svg({ size: 1024, markScale: 1.0, fill: '#FFFFFF' }));

@@ -25,7 +25,7 @@ let smokeBrowser = null;
 
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.getByText('FIT', { exact: true }).waitFor();
-  await page.getByText('Get started', { exact: true }).click();
+  await page.getByText('Find your trainer', { exact: true }).click();
   await page.getByText('Create your account', { exact: true }).waitFor();
   await page.getByText('Continue with Google', { exact: true }).waitFor();
 
@@ -42,13 +42,17 @@ let smokeBrowser = null;
   await page.getByText('No payment method connected', { exact: true }).waitFor();
   if ((await page.locator('body').innerText()).includes('4242')) throw new Error('Fake payment card is still visible');
 
+  await page.goto(`${baseUrl}/integrations`, { waitUntil: 'networkidle' });
+  await page.getByText('Connected experience', { exact: false }).waitFor();
+  await page.getByText('WhatsApp', { exact: true }).waitFor();
+
   await page.goto(`${baseUrl}/reset-password`, { waitUntil: 'networkidle' });
   await page.getByText('Choose a new password', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-smoke.png'), fullPage: true });
 
   const serious = errors.filter((e) => !e.includes('favicon') && !e.includes('net::ERR_ABORTED'));
   if (serious.length) throw new Error(`Browser errors: ${serious.join(' | ')}; responses: ${badResponses.join(' | ')}`);
-  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'reset-password'], screenshot: path.join(os.tmpdir(), 'fitconnect-smoke.png') }));
+  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'integrations', 'reset-password'], screenshot: path.join(os.tmpdir(), 'fitconnect-smoke.png') }));
   await smokeBrowser.close();
   smokeServer?.kill();
 })().catch(async (e) => {

@@ -64,11 +64,14 @@ export default function Account() {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
-        <View style={styles.header}><Txt variant="screenTitle">Account</Txt></View>
+        <View style={styles.header}>
+          <Txt style={styles.headerKicker}>YOUR FITCONNECT</Txt>
+          <Txt variant="screenTitle">Your space</Txt>
+        </View>
 
         {/* Profile */}
         <View style={styles.section}>
-          <Card onPress={() => router.push('/edit-profile')}>
+          <Card onPress={() => router.push('/edit-profile')} style={styles.profileCard}>
             <View style={styles.profile}>
               <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={56} />
               <View style={{ flex: 1 }}>
@@ -90,6 +93,7 @@ export default function Account() {
 
         <Section title="You">
           <Row icon="stats-chart" label="Progress & measurements" onPress={() => router.push('/(tabs)/progress')} />
+          <Row icon="extension-puzzle" label="Connected apps & integrations" value="View" onPress={() => router.push('/integrations' as any)} />
           <Row icon="gift" label="Share your FitConnect invite"
             value={profile?.referral_code ?? undefined} onPress={shareReferral} />
           <Row icon="logo-whatsapp" label="Invite via WhatsApp"
@@ -137,7 +141,7 @@ export default function Account() {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <View style={styles.section}>
-      <Txt variant="label" style={{ marginBottom: 10, marginTop: 6 }}>{title}</Txt>
+      <Txt style={styles.sectionTitle}>{title.toUpperCase()}</Txt>
       <Card padded={false}>{children}</Card>
     </View>
   );
@@ -148,7 +152,7 @@ function Row({ icon, label, value, onPress }: {
 }) {
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && onPress ? { opacity: 0.7 } : null]}>
-      <Ionicons name={icon} size={19} color={colors.textMuted} />
+      <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={colors.primary} /></View>
       <Txt variant="bodyStrong" style={{ flex: 1 }}>{label}</Txt>
       {value && <Txt variant="caption" style={{ marginRight: 6 }}>{value}</Txt>}
       <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
@@ -161,7 +165,7 @@ function ToggleRow({ icon, label, value, onChange }: {
 }) {
   return (
     <View style={styles.row}>
-      <Ionicons name={icon} size={19} color={colors.textMuted} />
+      <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={colors.primary} /></View>
       <Txt variant="bodyStrong" style={{ flex: 1 }}>{label}</Txt>
       <Switch
         value={value}
@@ -175,14 +179,18 @@ function ToggleRow({ icon, label, value, onChange }: {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  header: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 4 },
-  section: { paddingHorizontal: 22, marginTop: 12 },
+  header: { paddingHorizontal: 20, paddingTop: 16, paddingBottom: 8 },
+  headerKicker: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 1.2, color: colors.primary, marginBottom: 5 },
+  section: { paddingHorizontal: 20, marginTop: 12 },
+  sectionTitle: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 1.15, color: colors.textDim, marginBottom: 9, marginTop: 9 },
+  profileCard: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },
   profile: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 16, paddingVertical: 15,
+    paddingHorizontal: 14, paddingVertical: 13,
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
+  rowIcon: { width: 36, height: 36, borderRadius: 13, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
   signout: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   becomeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   becomeIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
