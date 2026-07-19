@@ -88,8 +88,10 @@ date strip).
    verified compiling; Expo Go shows a map placeholder.
 3. **Light theme intentionally absent** (dark-by-design); scheduled with
    Arabic/RTL localization — neither exists yet, and RTL matters for KSA.
-4. **Availability system is thin:** trainers have only an online/offline flag +
-   a client-side day picker; the `availability` slots table exists but is unused.
+4. **Availability is intentionally fixed-slot for the MVP:** trainers publish
+   one-hour openings from six daily time options in a paged calendar; clients
+   consume the same persisted slots. Recurrence, blackout rules, buffers, custom
+   durations, and external-calendar conflict detection are not built yet.
 5. **Membership counters:** `sessions_used` is not auto-incremented on completed
    sessions yet; loyalty_weeks not computed server-side.
 6. **Reviews aggregate:** trainer `rating`/`review_count` are not recomputed

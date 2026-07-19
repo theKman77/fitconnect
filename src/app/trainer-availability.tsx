@@ -4,11 +4,13 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
-import { colors, fonts, radius } from '@/theme';
+import { colors, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { addAvailability, getMyTrainer, listAvailability, removeAvailability } from '@/lib/trainer';
 import { confirm, notify } from '@/lib/confirm';
 import { Badge, Card, EmptyState, Txt } from '@/components/ui';
+import { DateRangePicker } from '@/components/scheduling/date-range-picker';
+import { TimeOpeningPicker } from '@/components/scheduling/time-opening-picker';
 import type { AvailabilitySlot, Trainer } from '@/types/domain';
 
 const TIMES = [
@@ -29,7 +31,6 @@ export default function TrainerAvailability() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const days = Array.from({ length: 14 }, (_, i) => dayjs().startOf('day').add(i, 'day'));
 
   const load = useCallback(async () => {
     try {
@@ -62,6 +63,19 @@ export default function TrainerAvailability() {
   }
 
   const upcoming = slots.filter((s) => dayjs(s.starts_at).isAfter(dayjs())).slice(0, 12);
+  const timeOptions = TIMES.map((time) => {
+    const start = day.hour(time.hour).minute(time.minute ?? 0).second(0).millisecond(0);
+    return {
+      key: start.toISOString(),
+      label: time.label,
+      hour: time.hour,
+      minute: time.minute,
+      active: slots.some((slot) => dayjs(slot.starts_at).isSame(start, 'minute')),
+      disabled: start.isBefore(dayjs().add(15, 'minute')),
+      busy: busyKey === start.toISOString(),
+      peak: time.hour >= 18,
+    };
+  });
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
@@ -70,7 +84,7 @@ export default function TrainerAvailability() {
         <Txt variant="sectionTitle">Availability</Txt>
         <View style={{ width: 24 }} />
       </View>
-      <ScrollView refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />} contentContainerStyle={{ padding: 22, paddingBottom: 40 }}>
+      <ScrollView contentInsetAdjustmentBehavior="automatic" refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}><Ionicons name="calendar" size={22} color={colors.primary} /></View>
           <View style={{ flex: 1 }}>
@@ -81,35 +95,18 @@ export default function TrainerAvailability() {
         {error && <Txt variant="caption" color={colors.danger} style={{ marginTop: 12 }}>{error}</Txt>}
 
         <Txt variant="label" style={styles.label}>Choose a day</Txt>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -22 }} contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }}>
-          {days.map((d) => {
-            const selected = d.isSame(day, 'day');
-            const count = slots.filter((s) => dayjs(s.starts_at).isSame(d, 'day')).length;
-            return (
-              <Pressable key={d.format('YYYY-MM-DD')} onPress={() => setDay(d)} style={[styles.day, selected && styles.dayOn]}>
-                <Txt style={[styles.dayName, selected && { color: colors.primary }]}>{d.isSame(dayjs(), 'day') ? 'TODAY' : d.format('ddd').toUpperCase()}</Txt>
-                <Txt style={styles.dayNumber}>{d.format('D')}</Txt>
-                <Txt variant="caption">{count ? `${count} open` : d.format('MMM')}</Txt>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
+        <DateRangePicker
+          selected={day}
+          onSelect={setDay}
+          maxDaysAhead={84}
+          countForDate={(date) => slots.filter((slot) => dayjs(slot.starts_at).isSame(date, 'day')).length}
+        />
 
-        <Txt variant="label" style={styles.label}>One-hour openings</Txt>
-        <View style={styles.timeGrid}>
-          {TIMES.map((t) => {
-            const start = day.hour(t.hour).minute(t.minute ?? 0).second(0).millisecond(0);
-            const active = slots.some((s) => dayjs(s.starts_at).isSame(start, 'minute'));
-            const past = start.isBefore(dayjs().add(15, 'minute'));
-            return (
-              <Pressable key={t.label} disabled={past || busyKey === start.toISOString()} onPress={() => toggleTime(t.hour, t.minute)}
-                style={[styles.time, active && styles.timeOn, past && { opacity: 0.35 }]}>
-                <Ionicons name={active ? 'checkmark-circle' : 'add-circle-outline'} size={17} color={active ? colors.white : colors.primary} />
-                <Txt style={[styles.timeText, active && { color: colors.white }]}>{t.label}</Txt>
-              </Pressable>
-            );
-          })}
+        <View style={styles.openingHead}>
+          <View><Txt variant="label">One-hour openings</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{day.format('dddd, MMMM D')}</Txt></View>
+          <Badge label={`${timeOptions.filter((option) => option.active).length} SELECTED`} tone={timeOptions.some((option) => option.active) ? 'brand' : 'neutral'} />
         </View>
+        <TimeOpeningPicker multiple options={timeOptions} onPress={(option) => toggleTime(option.hour, option.minute)} />
 
         <View style={styles.sectionHead}>
           <Txt variant="sectionTitle">Published openings</Txt>
@@ -140,17 +137,11 @@ export default function TrainerAvailability() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 8, paddingBottom: 8 },
+  content: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: 22, paddingBottom: 40 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.xl, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder },
   heroIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
   label: { marginTop: 24, marginBottom: 12 },
-  day: { width: 78, paddingVertical: 12, alignItems: 'center', borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  dayOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  dayName: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textDim },
-  dayNumber: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.textPrimary, marginVertical: 3 },
-  timeGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  time: { width: '48%', flexGrow: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 7, paddingVertical: 13, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.primaryBorder, backgroundColor: colors.surface },
-  timeOn: { backgroundColor: colors.primary, borderColor: colors.primary },
-  timeText: { fontFamily: fonts.bold, fontSize: 13, color: colors.textPrimary },
+  openingHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 24, marginBottom: 13 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, marginBottom: 12 },
   slotRow: { flexDirection: 'row', alignItems: 'center', padding: 15, gap: 12 },
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },

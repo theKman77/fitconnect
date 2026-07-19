@@ -13,6 +13,8 @@ import { listAvailability } from '@/lib/trainer';
 import { payForBooking } from '@/lib/payments';
 import { Badge, Button, Card, Txt } from '@/components/ui';
 import { Segmented } from '@/components/ui/Segmented';
+import { DateRangePicker } from '@/components/scheduling/date-range-picker';
+import { TimeOpeningPicker, type TimeOpening } from '@/components/scheduling/time-opening-picker';
 import type { AvailabilitySlot } from '@/types/domain';
 
 const STEPS = ['Plan', 'Details', 'When & where', 'Review & pay'];
@@ -32,7 +34,6 @@ export default function BookingFlow() {
   const [editingAddress, setEditingAddress] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
   const [availability, setAvailability] = useState<AvailabilitySlot[]>([]);
-  const dates = Array.from({ length: 14 }).map((_, i) => dayjs().startOf('day').add(i, 'day'));
 
   const trainer = draft.trainer;
 
@@ -56,6 +57,38 @@ export default function BookingFlow() {
       : step === 2 && draft.format !== 'virtual' && (!draft.addressLine.trim() || !draft.city.trim())
         ? 'Add the session address and district.'
         : null;
+  const firstOpening = availability.find((opening) => !opening.booked);
+  const selectedDate = draft.scheduledAt
+    ? dayjs(draft.scheduledAt).startOf('day')
+    : firstOpening
+      ? dayjs(firstOpening.starts_at).startOf('day')
+      : dayjs().startOf('day');
+  const publishedForDay = availability.filter((opening) => dayjs(opening.starts_at).isSame(selectedDate, 'day'));
+  const timeOptions: TimeOpening[] = availability.length > 0
+    ? publishedForDay.map((opening) => {
+        const openingTime = dayjs(opening.starts_at);
+        return {
+          key: opening.id,
+          label: openingTime.format('h:mm A'),
+          hour: openingTime.hour(),
+          minute: openingTime.minute(),
+          active: !!draft.scheduledAt && openingTime.isSame(dayjs(draft.scheduledAt), 'minute'),
+          disabled: opening.booked,
+          peak: opening.is_peak,
+        };
+      })
+    : TIME_SLOTS.map((option) => {
+        const openingTime = selectedDate.hour(option.hour).minute(option.minute).second(0);
+        return {
+          key: option.label,
+          label: option.label,
+          hour: option.hour,
+          minute: option.minute,
+          active: slot === option.label,
+          disabled: openingTime.isBefore(dayjs().add(30, 'minute')),
+          peak: option.peak,
+        };
+      });
 
   async function next() {
     if (step < STEPS.length - 1) return setStep(step + 1);
@@ -250,49 +283,37 @@ export default function BookingFlow() {
               </Card>
             )}
 
-            <Txt variant="label" style={styles.groupLabel}>Date</Txt>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8, paddingHorizontal: 22 }} style={{ marginHorizontal: -22 }}>
-              {dates.map((d) => {
-                const on = draft.scheduledAt ? dayjs(draft.scheduledAt).isSame(d, 'day') : false;
-                return (
-                  <Pressable key={d.format('YYYY-MM-DD')} onPress={() => pickDate(d)}
-                    style={[styles.dateChip, on && styles.dateChipOn]}>
-                    <Txt style={[styles.dateDow, on && { color: colors.primary }]}>
-                      {d.isSame(dayjs(), 'day') ? 'TODAY' : d.format('ddd').toUpperCase()}
-                    </Txt>
-                    <Txt style={[styles.dateNum, on && { color: colors.textPrimary }]}>{d.format('D')}</Txt>
-                    <Txt style={[styles.dateMon, on && { color: colors.textSecondary }]}>{d.format('MMM')}</Txt>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <Txt variant="label" style={styles.groupLabel}>Choose a date</Txt>
+            <DateRangePicker
+              selected={selectedDate}
+              onSelect={pickDate}
+              maxDaysAhead={56}
+              countForDate={(date) => availability.filter((opening) => !opening.booked && dayjs(opening.starts_at).isSame(date, 'day')).length}
+              disabledForDate={availability.length > 0
+                ? (date) => !availability.some((opening) => !opening.booked && dayjs(opening.starts_at).isSame(date, 'day'))
+                : undefined}
+            />
 
-            <Txt variant="label" style={styles.groupLabel}>Time</Txt>
-            <View style={styles.equipWrap}>
-              {availability.length > 0 ? availability.filter((s) => draft.scheduledAt && dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'day')).map((s) => (
-                <Pressable key={s.id} onPress={s.booked ? undefined : () => pickPublishedSlot(s)}
-                  accessibilityState={{ disabled: s.booked, selected: draft.scheduledAt ? dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'minute') : false }}
-                  style={[styles.slot, slot === dayjs(s.starts_at).format('h:mm A') && styles.slotOn, s.booked && { opacity: 0.35 }]}>
-                  <Txt style={[styles.equipTxt, slot === dayjs(s.starts_at).format('h:mm A') && { color: colors.white }]}>{dayjs(s.starts_at).format('h:mm A')}</Txt>
-                  {s.is_peak && <Badge label="PEAK" tone="brand" style={{ marginTop: 4 }} />}
-                </Pressable>
-              )) : TIME_SLOTS.map((s) => {
-                const base = draft.scheduledAt ? dayjs(draft.scheduledAt) : dayjs();
-                const unavailable = base.hour(s.hour).minute(s.minute).second(0).isBefore(dayjs().add(30, 'minute'));
-                return (
-                <Pressable key={s.label} onPress={unavailable ? undefined : () => pickSlot(s)}
-                  accessibilityState={{ disabled: unavailable, selected: slot === s.label }}
-                  style={[styles.slot, slot === s.label && styles.slotOn, unavailable && { opacity: 0.35 }]}>
-                  <Txt style={[styles.equipTxt, slot === s.label && { color: colors.white }]}>{s.label}</Txt>
-                  {s.peak && <Badge label="PEAK" tone="brand" style={{ marginTop: 4 }} />}
-                </Pressable>
-                );
-              })}
+            <View style={styles.timeSectionHead}>
+              <View style={{ flex: 1 }}>
+                <Txt variant="label">Choose a time</Txt>
+                <Txt variant="caption" style={{ marginTop: 3 }}>{selectedDate.format('dddd, MMMM D')}</Txt>
+              </View>
+              <Badge label={`${timeOptions.filter((option) => !option.disabled).length} OPEN`} tone="brand" />
             </View>
-            {availability.length > 0 && draft.scheduledAt && availability.filter((s) => dayjs(s.starts_at).isSame(dayjs(draft.scheduledAt), 'day')).length === 0 && (
-              <Card style={{ marginTop: 10 }}><Txt variant="caption">No published openings on this day. Choose a date with an open slot.</Txt></Card>
-            )}
+            <TimeOpeningPicker
+              options={timeOptions}
+              onPress={(option) => {
+                if (availability.length > 0) {
+                  const published = publishedForDay.find((opening) => opening.id === option.key);
+                  if (published) pickPublishedSlot(published);
+                  return;
+                }
+                const fallback = TIME_SLOTS.find((opening) => opening.label === option.key);
+                if (fallback) pickSlot(fallback);
+              }}
+              emptyMessage="This trainer has no openings on this date. Choose another highlighted day."
+            />
             {draft.isPeak && (
               <View style={styles.peakNote}>
                 <Ionicons name="trending-up" size={16} color={colors.primary} />
@@ -421,19 +442,7 @@ const styles = StyleSheet.create({
   equipTxt: { fontFamily: fonts.semibold, fontSize: 13, color: colors.textSecondary },
   feeNote: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
   addrRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  slot: {
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md,
-    paddingHorizontal: 16, paddingVertical: 12, alignItems: 'center', minWidth: 96,
-  },
-  slotOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  dateChip: {
-    width: 64, alignItems: 'center', paddingVertical: 12, borderRadius: radius.md,
-    backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 2,
-  },
-  dateChipOn: { borderColor: colors.primary, backgroundColor: colors.primaryTint },
-  dateDow: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 0.8, color: colors.textDim },
-  dateNum: { fontFamily: fonts.extrabold, fontSize: 18, color: colors.textMuted },
-  dateMon: { fontFamily: fonts.medium, fontSize: 10, color: colors.textDim },
+  timeSectionHead: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 26, marginBottom: 12 },
   peakNote: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16,
     backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder,

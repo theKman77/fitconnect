@@ -235,14 +235,29 @@ export default function TrainerBusinessHub() {
             )}
 
             <View style={styles.sectionHead}><View><Txt variant="monoTag">FORWARD VIEW</Txt><Txt style={styles.sectionTitle}>Next seven days</Txt></View></View>
-            <View style={styles.weekRow}>
-              {days.map((date, index) => (
-                <View key={date.format('YYYY-MM-DD')} style={[styles.dayCell, perDay[index] > 0 && styles.dayCellOn]}>
-                  <Txt style={[styles.dayName, perDay[index] > 0 && { color: colors.primary }]}>{date.format('dd').slice(0, 1)}</Txt>
-                  <Txt style={styles.dayNumber}>{date.format('D')}</Txt>
-                  <View style={[styles.dayCount, perDay[index] > 0 && styles.dayCountOn]}><Txt style={[styles.dayCountText, perDay[index] > 0 && { color: colors.white }]}>{perDay[index]}</Txt></View>
-                </View>
-              ))}
+            <View style={styles.weekGrid}>
+              {days.map((date, index) => {
+                const count = perDay[index];
+                const firstSession = upcoming.find((booking) => dayjs(booking.scheduled_at).isSame(date, 'day'));
+                return (
+                  <Pressable
+                    key={date.format('YYYY-MM-DD')}
+                    onPress={() => router.push('/trainer-availability' as any)}
+                    accessibilityLabel={`${date.format('dddd, MMMM D')}, ${count} sessions`}
+                    style={({ pressed }) => [styles.agendaDay, count > 0 && styles.agendaDayOn, pressed && styles.pressed]}
+                  >
+                    <View style={styles.agendaDate}>
+                      <Txt style={[styles.agendaDayName, count > 0 && { color: colors.primary }]}>{date.format('ddd').toUpperCase()}</Txt>
+                      <Txt style={styles.agendaDayNumber}>{date.format('D')}</Txt>
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Txt variant="bodyStrong" numberOfLines={1}>{count > 0 ? `${count} session${count === 1 ? '' : 's'}` : 'Open day'}</Txt>
+                      <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{firstSession ? `First at ${dayjs(firstSession.scheduled_at).format('h:mm A')}` : 'Add availability'}</Txt>
+                    </View>
+                    <Ionicons name={count > 0 ? 'checkmark-circle' : 'add-circle-outline'} size={18} color={count > 0 ? colors.success : colors.textDim} />
+                  </Pressable>
+                );
+              })}
             </View>
 
             <View style={styles.sectionHead}><View><Txt variant="monoTag">EARNINGS TREND</Txt><Txt style={styles.sectionTitle}>{config.paymentsEnabled ? formatMoney(earnings) : 'Ready for live payments'}</Txt></View></View>
@@ -342,14 +357,12 @@ const styles = StyleSheet.create({
   clientRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
   rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
   rebook: { fontFamily: fonts.bold, fontSize: 9, color: colors.primary },
-  weekRow: { flexDirection: 'row', gap: 6 },
-  dayCell: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingVertical: 10, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle },
-  dayCellOn: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },
-  dayName: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textDim },
-  dayNumber: { fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary },
-  dayCount: { minWidth: 19, height: 19, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceHigh },
-  dayCountOn: { backgroundColor: colors.primary },
-  dayCountText: { fontFamily: fonts.bold, fontSize: 9, color: colors.textDim },
+  weekGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  agendaDay: { width: '48%', flexGrow: 1, minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: 10, padding: 11, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle },
+  agendaDayOn: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },
+  agendaDate: { width: 39, height: 50, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.surfaceElevated },
+  agendaDayName: { fontFamily: fonts.monoBold, fontSize: 7, color: colors.textDim, letterSpacing: 0.5 },
+  agendaDayNumber: { fontFamily: fonts.extrabold, fontSize: 17, color: colors.textPrimary, marginTop: 2 },
   chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 94 },
   chartColumn: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 7 },
   chartBar: { width: '66%', borderRadius: 5, backgroundColor: colors.primary },

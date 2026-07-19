@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-19 — Scheduling clarity
+
+### Date and time selection
+
+- Replaced the narrow horizontal date strip with a shared, paged two-week calendar grid in both client booking and trainer availability.
+- Added opening counts, unavailable-day states, an explicit selected date, 8-to-12-week navigation, and accessible labels for every date.
+- Replaced the six undifferentiated time buttons with roomy morning, afternoon, and evening groups that show available, unavailable, popular, selected, and saving states.
+- Reworked the trainer dashboard's compressed seven-day row into a two-column agenda with session counts, first-session times, and direct schedule actions.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized browser flow passes ten routes, including the new calendar and all three time periods, with no serious console errors.
+
 ## 2026-07-19 — Trainer Business Hub and session payoff
 
 ### Trainer retention value
