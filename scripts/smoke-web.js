@@ -59,6 +59,11 @@ let smokeBrowser = null;
   await page.getByText('ما أهدافك الرياضية؟', { exact: true }).waitFor();
   await page.getByText('بناء العضلات', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-onboarding-ar.png'), fullPage: true });
+  await page.goto(`${baseUrl}/session/00000000-0000-4000-8000-000000000000/rate?preview=1`, { waitUntil: 'networkidle' });
+  await page.getByText('لقد حضرت.', { exact: true }).waitFor();
+  await page.getByText('اكتملت الجلسة', { exact: true }).waitFor();
+  await page.getByText('ما الذي تميز؟', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-celebration-ar.png'), fullPage: true });
   await page.goto(baseUrl, { waitUntil: 'networkidle' });
   await page.getByLabel('Switch to English').click();
   await page.getByText('Your next level is', { exact: false }).waitFor();
@@ -120,7 +125,7 @@ let smokeBrowser = null;
 
   const serious = errors.filter((e) => !e.includes('favicon') && !e.includes('net::ERR_ABORTED') && !(smokeServer && e.includes('net::ERR_NETWORK_ACCESS_DENIED')));
   if (serious.length) throw new Error(`Browser errors: ${serious.join(' | ')}; responses: ${badResponses.join(' | ')}`);
-  console.log(JSON.stringify({ ok: true, trainerDataAvailable, pages: ['welcome', 'welcome-ar', 'schedule-ar', 'progress-ar', 'discover-ar', 'sign-up', 'discover', ...(trainerDataAvailable ? ['trainer', 'booking'] : []), 'payments', 'integrations', 'trainer-availability', 'celebration', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-welcome-ar.png'), path.join(os.tmpdir(), 'fitconnect-schedule-ar.png'), path.join(os.tmpdir(), 'fitconnect-progress-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), ...(trainerDataAvailable ? [path.join(os.tmpdir(), 'fitconnect-trainer.png')] : []), path.join(os.tmpdir(), 'fitconnect-schedule.png'), path.join(os.tmpdir(), 'fitconnect-celebration.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
+  console.log(JSON.stringify({ ok: true, trainerDataAvailable, pages: ['welcome', 'welcome-ar', 'schedule-ar', 'progress-ar', 'discover-ar', 'sign-up', 'celebration-ar', 'discover', ...(trainerDataAvailable ? ['trainer', 'booking'] : []), 'payments', 'integrations', 'trainer-availability', 'celebration', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-welcome-ar.png'), path.join(os.tmpdir(), 'fitconnect-schedule-ar.png'), path.join(os.tmpdir(), 'fitconnect-progress-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover-ar.png'), path.join(os.tmpdir(), 'fitconnect-celebration-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), ...(trainerDataAvailable ? [path.join(os.tmpdir(), 'fitconnect-trainer.png')] : []), path.join(os.tmpdir(), 'fitconnect-schedule.png'), path.join(os.tmpdir(), 'fitconnect-celebration.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
   await smokeBrowser.close();
   smokeServer?.kill();
 })().catch(async (e) => {

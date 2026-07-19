@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-19 — Complete Arabic operational journey
+
+- Localized the realtime client session screen, including trainer arrival states, safety guidance, protected chat, Saudi emergency calling, location-sharing readiness, and post-session rating access.
+- Localized and mirrored the animated session celebration, weekly mission, XP metrics, trainer rating tags, progress-photo controls, coach note, and accessibility labels.
+- Added Arabic number presentation and directional behavior without changing the stable database values used for statuses, ratings, and review tags.
+- Expanded the browser walkthrough with a dedicated Arabic post-session celebration check and screenshot.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized bilingual browser walkthrough passes with no serious browser errors.
+
 ## 2026-07-19 — Arabic account and trainer operations
 
 - Localized the client Account area, profile editor, favorites, session history, memberships, payment readiness, integrations, referrals, booking confirmation, and password recovery.

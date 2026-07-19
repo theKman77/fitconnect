@@ -11,6 +11,7 @@ import { listMessages, sendMessage, subscribeMessages } from '@/lib/chat';
 import { getTrainerLocation, subscribeBooking, subscribeTrainerLocation } from '@/lib/realtime';
 import { isBackendConfigured } from '@/lib/supabase';
 import { useAuth } from '@/context/auth';
+import { useLocale } from '@/context/locale';
 import { TrackMap } from '@/components/TrackMap';
 import { Avatar, Button, Txt } from '@/components/ui';
 import type { Booking, Message, Trainer } from '@/types/domain';
@@ -32,6 +33,7 @@ export default function Track() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { profile } = useAuth();
+  const { locale, localeTag, isRTL, tr } = useLocale();
   const [booking, setBooking] = useState<Booking | undefined>();
   const [trainer, setTrainer] = useState<Trainer | undefined>();
   const [eta, setEta] = useState(6);
@@ -56,12 +58,12 @@ export default function Track() {
       setBooking(b);
       if (b) setPhase(statusToPhase(b.status));
       if (b) getTrainer(b.trainer_id).then(setTrainer);
-    }).catch(() => setLoadError('Could not load this session. Pull back and try again.'));
+    }).catch(() => setLoadError(tr('Could not load this session. Pull back and try again.')));
     // Load chat history, then subscribe to new messages in real time.
     listMessages(id).then((m) => {
       setMessages(m);
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: false }), 60);
-    }).catch(() => setLoadError('The session loaded, but chat is temporarily unavailable.'));
+    }).catch(() => setLoadError(tr('The session loaded, but chat is temporarily unavailable.')));
     const unsub = subscribeMessages(id, (msg) => {
       setMessages((cur) => {
         if (cur.some((x) => x.id === msg.id)) return cur;
@@ -79,7 +81,7 @@ export default function Track() {
       setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 60);
     });
     return unsub;
-  }, [id, myId]);
+  }, [id, myId, tr]);
 
   // Live mode: reflect the trainer's real status changes as they happen.
   useEffect(() => {
@@ -126,16 +128,16 @@ export default function Track() {
       await sendMessage(id, myId, body);
     } catch {
       setMessages((m) => m.filter((x) => x.id !== optimistic.id));
-      notify('Message not sent', 'Check your connection and try again.');
+      notify(tr('Message not sent'), tr('Check your connection and try again.'));
     }
   }
 
   function onSos() {
     confirm(
       {
-        title: 'SOS — Emergency',
-        message: 'This opens a phone call to Saudi emergency medical services (997). FitConnect does not automatically share your location in the web demo.',
-        confirmLabel: 'Call 997',
+        title: tr('SOS — Emergency'),
+        message: tr('This opens a phone call to Saudi emergency medical services (997). FitConnect does not automatically share your location in the web demo.'),
+        confirmLabel: tr('Call 997'),
         destructive: true,
       },
       () => Linking.openURL('tel:997'),
@@ -143,23 +145,30 @@ export default function Track() {
   }
 
   function onCall() {
-    notify('Call trainer', 'In-app calling connects through the live backend so numbers stay private. Use chat below for now.');
+    notify(tr('Call trainer'), tr('In-app calling connects through the live backend so numbers stay private. Use chat below for now.'));
   }
 
-  const trainerName = trainer?.display_name.split(' ')[0] ?? 'Your trainer';
+  const trainerName = trainer?.display_name.split(' ')[0] ?? tr('Your trainer');
 
   // Headline: real status in live mode, simulated ETA in demo mode.
   let headline: string;
   if (isBackendConfigured) {
     const s = booking?.status;
-    headline =
-      s === 'in_progress' ? `Session with ${trainerName} in progress`
-      : s === 'arriving' ? `${trainerName} is arriving`
-      : s === 'en_route' ? `${trainerName} is on the way`
-      : s === 'completed' ? `Session complete`
-      : `${trainerName} confirmed your session`;
+    headline = locale === 'ar'
+      ? s === 'in_progress' ? `جلستك مع ${trainerName} جارية الآن`
+        : s === 'arriving' ? `${trainerName} على وشك الوصول`
+        : s === 'en_route' ? `${trainerName} في الطريق إليك`
+        : s === 'completed' ? 'اكتملت الجلسة'
+        : `أكد ${trainerName} جلستك`
+      : s === 'in_progress' ? `Session with ${trainerName} in progress`
+        : s === 'arriving' ? `${trainerName} is arriving`
+        : s === 'en_route' ? `${trainerName} is on the way`
+        : s === 'completed' ? 'Session complete'
+        : `${trainerName} confirmed your session`;
   } else {
-    headline = eta > 0 ? `${trainerName} is ${eta} min away` : `${trainerName} has arrived`;
+    headline = locale === 'ar'
+      ? eta > 0 ? `${trainerName} على بُعد ${eta.toLocaleString(localeTag)} دقائق` : `وصل ${trainerName}`
+      : eta > 0 ? `${trainerName} is ${eta} min away` : `${trainerName} has arrived`;
   }
 
   return (
@@ -167,19 +176,21 @@ export default function Track() {
       {/* Live map */}
       <View style={styles.map}>
         <TrackMap trainer={trainerLoc} destination={destination} />
-        <Pressable style={styles.mapBack} onPress={() => router.replace('/(tabs)')}>
-          <Ionicons name="chevron-back" size={22} color={colors.white} />
+        <Pressable style={[styles.mapBack, isRTL && styles.mapBackRTL]} onPress={() => router.replace('/(tabs)')}>
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={colors.white} />
         </Pressable>
       </View>
 
       <ScrollView ref={scrollRef} style={styles.sheet} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 12 }}>
         {/* Trainer status */}
-        <View style={styles.statusHead}>
+        <View style={[styles.statusHead, isRTL && styles.rtlRow]}>
           <Avatar uri={trainer?.avatar_url} name={trainerName} size={48} />
           <View style={{ flex: 1 }}>
             <Txt variant="cardTitle">{headline}</Txt>
             <Txt variant="caption" style={{ marginTop: 2 }}>
-              {booking?.format === 'virtual' ? 'Video session starting soon' : `Heading to ${booking?.address_line ?? 'your address'}`}
+              {booking?.format === 'virtual'
+                ? tr('Video session starting soon')
+                : locale === 'ar' ? `متجه إلى ${booking?.address_line ?? tr('your address')}` : `Heading to ${booking?.address_line ?? 'your address'}`}
             </Txt>
           </View>
           <Pressable style={styles.callBtn} onPress={onCall}><Ionicons name="call" size={18} color={colors.primary} /></Pressable>
@@ -187,42 +198,42 @@ export default function Track() {
         {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
 
         {/* Phase stepper */}
-        <View style={styles.phases}>
+        <View style={[styles.phases, isRTL && styles.rtlRow]}>
           {PHASES.map((p, i) => {
             const active = PHASES.findIndex((x) => x.key === phase) >= i;
             return (
               <View key={p.key} style={styles.phase}>
                 <View style={[styles.dot, active && styles.dotOn]} />
-                <Txt variant="caption" color={active ? colors.textPrimary : colors.textDim}>{p.label}</Txt>
+                <Txt variant="caption" color={active ? colors.textPrimary : colors.textDim}>{tr(p.label)}</Txt>
               </View>
             );
           })}
         </View>
 
         {/* Safety */}
-        <Txt variant="label" style={styles.groupLabel}>Safety</Txt>
+        <Txt variant="label" style={styles.groupLabel}>{tr('Safety')}</Txt>
         <View style={styles.safetyRow}>
-          <Pressable style={styles.shareBtn} onPress={() => notify('Native app required', 'Continuous location sharing needs the future iOS/Android build. It is not active in this web demo.')}>
+          <Pressable style={[styles.shareBtn, isRTL && styles.rtlRow]} onPress={() => notify(tr('Native app required'), tr('Continuous location sharing needs the future iOS/Android build. It is not active in this web demo.'))}>
             <Ionicons name="location-outline" size={18} color={colors.textMuted} />
             <View style={{ flex: 1 }}>
-              <Txt variant="bodyStrong">Live safety sharing</Txt>
-              <Txt variant="caption">Coming with the native app · not active on web</Txt>
+              <Txt variant="bodyStrong">{tr('Live safety sharing')}</Txt>
+              <Txt variant="caption">{tr('Coming with the native app · not active on web')}</Txt>
             </View>
             <Ionicons name="information-circle-outline" size={18} color={colors.textMuted} />
           </Pressable>
         </View>
-        <Pressable style={styles.sos} onPress={onSos}>
+        <Pressable style={[styles.sos, isRTL && styles.rtlRow]} onPress={onSos}>
           <Ionicons name="warning" size={18} color={colors.white} />
-          <Txt style={styles.sosTxt}>SOS — Emergency</Txt>
+          <Txt style={styles.sosTxt}>{tr('SOS — Emergency')}</Txt>
         </Pressable>
 
         {/* Chat */}
-        <Txt variant="label" style={styles.groupLabel}>Chat</Txt>
+        <Txt variant="label" style={styles.groupLabel}>{tr('Chat')}</Txt>
         <Txt variant="caption" style={{ marginBottom: 10 }}>
-          Payments made outside FitConnect aren’t protected by no-show cover or support.
+          {tr('Payments made outside FitConnect aren’t protected by no-show cover or support.')}
         </Txt>
         <View style={{ gap: 8 }}>
-          {messages.length === 0 && <Txt variant="caption">No messages yet. Say hi 👋</Txt>}
+          {messages.length === 0 && <Txt variant="caption">{tr('No messages yet. Say hi 👋')}</Txt>}
           {messages.map((m) => {
             const mine = m.sender_id === myId;
             return (
@@ -235,22 +246,22 @@ export default function Track() {
       </ScrollView>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-        <View style={styles.inputBar}>
+        <View style={[styles.inputBar, isRTL && styles.rtlRow]}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
-            placeholder="Message your trainer…"
+            placeholder={tr('Message your trainer…')}
             placeholderTextColor={colors.textDim}
-            style={styles.input}
+            style={[styles.input, isRTL && styles.inputRTL]}
             onSubmitEditing={send}
           />
           <Pressable onPress={send} style={styles.sendBtn}><Ionicons name="arrow-up" size={20} color={colors.white} /></Pressable>
         </View>
         <View style={styles.endWrap}>
           {booking?.status === 'completed' ? (
-            <Button title="Rate completed session" variant="secondary" onPress={() => router.replace(`/session/${id}/rate`)} />
+            <Button title={tr('Rate completed session')} variant="secondary" onPress={() => router.replace(`/session/${id}/rate`)} />
           ) : (
-            <Txt variant="caption" center>Your trainer ends the session. Rating unlocks after completion.</Txt>
+            <Txt variant="caption" center>{tr('Your trainer ends the session. Rating unlocks after completion.')}</Txt>
           )}
         </View>
       </KeyboardAvoidingView>
@@ -265,6 +276,9 @@ const styles = StyleSheet.create({
     position: 'absolute', top: 8, left: 18, width: 38, height: 38, borderRadius: 19,
     backgroundColor: 'rgba(11,11,13,0.55)', alignItems: 'center', justifyContent: 'center',
   },
+  mapBackRTL: { left: undefined, right: 18 },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
+  inputRTL: { textAlign: 'right', writingDirection: 'rtl' },
   route: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   pinTrainer: { width: 34, height: 34, borderRadius: 17, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
   dashes: { width: 80, height: 2, backgroundColor: colors.textFaint },

@@ -86,14 +86,12 @@ date strip).
    Apple/Google native Sign-In — require an EAS dev build the owner has deferred
    (no $99 Apple account yet). Code for maps/push/location exists and is
    verified compiling; Expo Go shows a map placeholder.
-3. **Localization is in progress:** English/Arabic preference, real web RTL,
-   native-safe shared controls, welcome/navigation, account creation, onboarding,
-   Home, Discover, Progress, trainer profiles, and the client booking journey are
-   implemented. Client account utilities, integrations, memberships, payment
-   readiness, trainer Business Hub, bookings, messages, account/application,
-   offer editing, and trainer-side session chat are also localized. Client live
-   tracking and the post-session celebration still need the final page-by-page
-   pass. Light theme remains intentionally absent.
+3. **Localization is complete for the operational MVP:** the persisted
+   English/Arabic preference, real web RTL, native-safe shared controls, client
+   acquisition and booking, account utilities, trainer operations, live-session
+   tracking/chat, and post-session celebration are localized. User-generated
+   content and Supabase error text remain in their source language. Light theme
+   remains intentionally absent.
 4. **Availability is intentionally fixed-slot for the MVP:** trainers publish
    one-hour openings from six daily time options in a paged calendar; clients
    consume the same persisted slots. Recurrence, blackout rules, buffers, custom

@@ -2,7 +2,7 @@
 
 ## Current release reality — 2026-07-19
 
-The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL now covers the complete client acquisition and booking journey; the next product wave continues through trainer operations, account utilities, chat, and post-session screens, followed by deeper trainer CRM tools and challenge-based social retention.
+The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL now covers the complete acquisition, booking, account, trainer-operations, live-session, and post-session journeys. The next product wave focuses on deeper trainer CRM tools and challenge-based social retention.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 
@@ -14,7 +14,7 @@ from the approved design, with a real backend and test-mode payments.
 - **Backend:** Supabase — Postgres, Auth, Realtime (chat + live location), Storage (photos)
 - **Payments:** Moyasar (KSA market: mada, Apple Pay, cards) — **test mode** first.
   (Stripe ruled out: not available to KSA-based businesses.)
-- **Market:** Saudi Arabia — SAR currency, Riyadh demo data, persisted English/Arabic UI with genuine RTL across the client journey.
+- **Market:** Saudi Arabia — SAR currency, Riyadh demo data, and persisted English/Arabic UI with genuine RTL across the complete operational journey.
 - **Maps/Location:** react-native-maps + expo-location (needs a dev client build)
 - **Design system:** `src/theme` — tokens taken directly from the design file
 
@@ -110,9 +110,11 @@ from the approved design, with a real backend and test-mode payments.
       bookings RLS INSERT..RETURNING bug (migration 0006).
 - [x] **Feasibility report** published as artifact (screenshots, analysis,
       ARPU/LTV/IAP research, disintermediation strategy).
-- [ ] **Next engagement wave (concepted in report):** post-session celebration
-      screen, challenges/squads/leaderboards, trainer Business Hub (payouts, CRM
-      notes, rebook prompts, partner-gym perk surface).
+- [x] **Post-session celebration:** animated completion payoff, XP, weekly
+      mission progress, trainer rating tags, private progress photo, and coach note.
+- [ ] **Next engagement wave (concepted in report):** challenges, squads and
+      leaderboards, plus deeper trainer CRM notes, rebook prompts, and partner-gym
+      perk fulfillment.
 
 ## What needs YOU (owner-only steps) — see docs/SETUP.md
 1. Create a free Supabase project → paste URL + anon key into `.env`
