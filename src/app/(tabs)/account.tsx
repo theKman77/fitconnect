@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
+import { Platform, Pressable, ScrollView, Share, StyleSheet, Switch, View } from 'react-native';
 import { useRouter, type Href } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -9,6 +9,7 @@ import { becomeTrainer } from '@/lib/trainer';
 import { confirm, notify } from '@/lib/confirm';
 import { shareOnWhatsApp } from '@/lib/integrations';
 import { Avatar, Card, Txt } from '@/components/ui';
+import { useLocale } from '@/context/locale';
 
 export default function Account() {
   const router = useRouter();
@@ -100,6 +101,10 @@ export default function Account() {
             onPress={() => shareOnWhatsApp(`Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${profile?.referral_code ?? 'FIT-FRIEND'}.`)} />
         </Section>
 
+        <Section title="Language · اللغة">
+          <LanguageRow />
+        </Section>
+
         {/* Safety & accessibility */}
         <Section title="Safety & accessibility">
           <Row icon="alert-circle" label="Emergency contact"
@@ -135,6 +140,34 @@ export default function Account() {
         </View>
       </ScrollView>
     </SafeAreaView>
+  );
+}
+
+function LanguageRow() {
+  const { locale, setLocale, t, isRTL } = useLocale();
+  const changeLanguage = async (next: 'en' | 'ar') => {
+    try {
+      await setLocale(next);
+    } catch (e: any) {
+      notify('Language not saved', e?.message ?? 'Please try again.');
+    }
+  };
+
+  return (
+    <View style={[styles.languageRow, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+      <View style={styles.rowIcon}><Ionicons name="language" size={18} color={colors.primary} /></View>
+      <View style={{ flex: 1 }}>
+        <Txt variant="bodyStrong">{t('language.title')}</Txt>
+        <Txt variant="caption" style={{ marginTop: 2 }}>{t('language.subtitle')}</Txt>
+      </View>
+      <View style={[styles.languageToggle, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+        {(['en', 'ar'] as const).map((option) => (
+          <Pressable key={option} onPress={() => changeLanguage(option)} style={[styles.languageOption, locale === option && styles.languageOptionOn]}>
+            <Txt style={[styles.languageOptionText, locale === option && { color: colors.white }]}>{option === 'en' ? 'EN' : 'ع'}</Txt>
+          </Pressable>
+        ))}
+      </View>
+    </View>
   );
 }
 
@@ -191,6 +224,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border,
   },
   rowIcon: { width: 36, height: 36, borderRadius: 13, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  languageRow: { minHeight: 72, flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 14, paddingVertical: 12 },
+  languageToggle: { flexDirection: 'row', gap: 4, padding: 4, borderRadius: radius.pill, backgroundColor: colors.surfaceHigh },
+  languageOption: { minWidth: 38, height: 34, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  languageOptionOn: { backgroundColor: colors.primary },
+  languageOptionText: { fontFamily: fonts.bold, fontSize: 11, color: colors.textMuted },
   signout: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   becomeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   becomeIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },

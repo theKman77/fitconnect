@@ -86,8 +86,10 @@ date strip).
    Apple/Google native Sign-In — require an EAS dev build the owner has deferred
    (no $99 Apple account yet). Code for maps/push/location exists and is
    verified compiling; Expo Go shows a map placeholder.
-3. **Light theme intentionally absent** (dark-by-design); scheduled with
-   Arabic/RTL localization — neither exists yet, and RTL matters for KSA.
+3. **Localization is in progress:** English/Arabic preference, real web RTL,
+   native-safe shared controls, Arabic welcome/navigation, and scheduling are
+   implemented. The remaining marketplace, profile, progress, and session copy
+   still needs page-by-page translation. Light theme remains intentionally absent.
 4. **Availability is intentionally fixed-slot for the MVP:** trainers publish
    one-hour openings from six daily time options in a paged calendar; clients
    consume the same persisted slots. Recurrence, blackout rules, buffers, custom

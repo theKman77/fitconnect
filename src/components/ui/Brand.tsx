@@ -29,8 +29,8 @@ export function Brand({ compact = false, markOnly = false, style }: Props) {
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  wordmark: { flexDirection: 'row', alignItems: 'baseline', gap: 5 },
+  row: { direction: 'ltr', flexDirection: 'row', alignItems: 'center', gap: 10 },
+  wordmark: { direction: 'ltr', flexDirection: 'row', alignItems: 'baseline', gap: 5 },
   fit: { fontFamily: fonts.extrabold, fontSize: 26, letterSpacing: -0.9, color: colors.primary },
   connect: { fontFamily: fonts.bold, fontSize: 15, letterSpacing: 2.4, color: colors.textPrimary },
   fitCompact: { fontSize: 20 },

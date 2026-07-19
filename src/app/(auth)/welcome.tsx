@@ -1,4 +1,4 @@
-import { ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { Platform, Pressable, ScrollView, StyleSheet, View, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,43 +6,52 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { colors, fonts, radius } from '@/theme';
 import { Brand, Button, Txt } from '@/components/ui';
 import { useAuth } from '@/context/auth';
-
-const PROOFS = [
-  { icon: 'shield-checkmark' as const, label: 'Vetted trainers' },
-  { icon: 'calendar' as const, label: 'Book in minutes' },
-  { icon: 'location' as const, label: 'Across Riyadh' },
-];
+import { useLocale } from '@/context/locale';
 
 export default function Welcome() {
   const router = useRouter();
   const { isDemo } = useAuth();
+  const { locale, setLocale, isRTL, t } = useLocale();
   const { width } = useWindowDimensions();
   const wide = width >= 820;
+  const proofs = [
+    { icon: 'shield-checkmark' as const, label: t('welcome.vetted') },
+    { icon: 'calendar' as const, label: t('welcome.fastBooking') },
+    { icon: 'location' as const, label: t('welcome.riyadh') },
+  ];
 
   return (
     <SafeAreaView style={styles.root}>
       <View style={styles.orbOne} pointerEvents="none" />
       <View style={styles.orbTwo} pointerEvents="none" />
+      <Pressable
+        accessibilityLabel={locale === 'ar' ? 'Switch to English' : 'التبديل إلى العربية'}
+        onPress={() => setLocale(locale === 'ar' ? 'en' : 'ar')}
+        style={styles.languageButton}
+      >
+        <Ionicons name="language" size={15} color={colors.primary} />
+        <Txt style={styles.languageText}>{locale === 'ar' ? 'EN' : 'العربية'}</Txt>
+      </Pressable>
       <ScrollView
         contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scroll, wide && styles.scrollWide]}
       >
-        <View style={[styles.shell, wide && styles.shellWide]}>
+        <View style={[styles.shell, wide && styles.shellWide, wide && isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
           <View style={[styles.copy, wide && styles.copyWide]}>
             <Brand />
             <View style={styles.eyebrow}>
               <View style={styles.liveDot} />
-              <Txt style={styles.eyebrowText}>PERSONAL TRAINING, REBUILT</Txt>
+              <Txt style={styles.eyebrowText}>{t('welcome.kicker')}</Txt>
             </View>
             <Txt style={[styles.title, wide && styles.titleWide]}>
-              Your next level is{`\n`}closer than you think.
+              {t('welcome.title')}
             </Txt>
             <Txt style={styles.subtitle}>
-              Discover trusted coaches, book around your schedule, and turn every session into visible progress.
+              {t('welcome.subtitle')}
             </Txt>
             <View style={styles.proofs}>
-              {PROOFS.map((proof) => (
+              {proofs.map((proof) => (
                 <View key={proof.label} style={styles.proof}>
                   <Ionicons name={proof.icon} size={15} color={colors.primary} />
                   <Txt style={styles.proofText}>{proof.label}</Txt>
@@ -52,11 +61,11 @@ export default function Welcome() {
             {!wide && (
               <View style={styles.actionsMobile}>
                 <Button
-                  title="Find your trainer"
+                  title={t('welcome.find')}
                   icon="arrow-forward"
                   onPress={() => router.push(isDemo ? '/(auth)/onboarding' : { pathname: '/(auth)/sign-in', params: { mode: 'up' } })}
                 />
-                <Button title="Sign in" variant="ghost" onPress={() => router.push('/(auth)/sign-in')} />
+                <Button title={t('welcome.signIn')} variant="ghost" onPress={() => router.push('/(auth)/sign-in')} />
               </View>
             )}
           </View>
@@ -69,20 +78,20 @@ export default function Welcome() {
             />
             <View style={styles.visualGrid} />
             <View style={styles.visualTop}>
-              <Txt style={styles.visualTag}>TODAY'S MOMENTUM</Txt>
+              <Txt style={styles.visualTag}>{t('welcome.momentum')}</Txt>
               <View style={styles.scorePill}><Txt style={styles.scoreText}>+120 XP</Txt></View>
             </View>
             <View style={styles.ring}>
               <View style={styles.ringInner}>
                 <Txt style={styles.ringValue}>3</Txt>
-                <Txt style={styles.ringLabel}>WEEK STREAK</Txt>
+                <Txt style={styles.ringLabel}>{t('welcome.streak')}</Txt>
               </View>
             </View>
             <View style={styles.sessionCard}>
               <View style={styles.sessionIcon}><Ionicons name="flash" size={19} color={colors.primary} /></View>
               <View style={{ flex: 1 }}>
-                <Txt style={styles.sessionTitle}>Strength session</Txt>
-                <Txt style={styles.sessionMeta}>Maya · Today, 6:30 PM</Txt>
+                <Txt style={styles.sessionTitle}>{t('welcome.session')}</Txt>
+                <Txt style={styles.sessionMeta}>{t('welcome.sessionTime')}</Txt>
               </View>
               <Ionicons name="arrow-forward" size={18} color={colors.textPrimary} />
             </View>
@@ -92,12 +101,12 @@ export default function Welcome() {
         {wide && (
           <View style={styles.actions}>
             <Button
-              title="Find your trainer"
+              title={t('welcome.find')}
               icon="arrow-forward"
               onPress={() => router.push(isDemo ? '/(auth)/onboarding' : { pathname: '/(auth)/sign-in', params: { mode: 'up' } })}
             />
-            <Button title="Sign in" variant="ghost" onPress={() => router.push('/(auth)/sign-in')} />
-            {isDemo && <Txt variant="caption" center>Demo workspace · Sample trainers and progress are included</Txt>}
+            <Button title={t('welcome.signIn')} variant="ghost" onPress={() => router.push('/(auth)/sign-in')} />
+            {isDemo && <Txt variant="caption" center>{t('welcome.demo')}</Txt>}
           </View>
         )}
       </ScrollView>
@@ -107,6 +116,8 @@ export default function Welcome() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg, overflow: 'hidden' },
+  languageButton: { position: 'absolute', zIndex: 5, top: 14, right: 20, minHeight: 38, flexDirection: 'row', alignItems: 'center', gap: 7, paddingHorizontal: 12, borderRadius: radius.pill, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.primaryBorder },
+  languageText: { fontFamily: fonts.bold, fontSize: 11, color: colors.textPrimary },
   scroll: { flexGrow: 1, padding: 20, paddingBottom: 26 },
   scrollWide: { paddingHorizontal: 48 },
   shell: { flex: 1, justifyContent: 'center', gap: 34, width: '100%', maxWidth: 1120, alignSelf: 'center' },

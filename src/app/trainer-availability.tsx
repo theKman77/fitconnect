@@ -11,6 +11,7 @@ import { confirm, notify } from '@/lib/confirm';
 import { Badge, Card, EmptyState, Txt } from '@/components/ui';
 import { DateRangePicker } from '@/components/scheduling/date-range-picker';
 import { TimeOpeningPicker } from '@/components/scheduling/time-opening-picker';
+import { useLocale } from '@/context/locale';
 import type { AvailabilitySlot, Trainer } from '@/types/domain';
 
 const TIMES = [
@@ -25,6 +26,7 @@ const TIMES = [
 export default function TrainerAvailability() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { locale, isRTL, t } = useLocale();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [day, setDay] = useState(dayjs().add(1, 'day').startOf('day'));
@@ -79,22 +81,22 @@ export default function TrainerAvailability() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={10}><Ionicons name="chevron-back" size={24} color={colors.textPrimary} /></Pressable>
-        <Txt variant="sectionTitle">Availability</Txt>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
+        <Pressable onPress={() => router.back()} hitSlop={10}><Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.textPrimary} /></Pressable>
+        <Txt variant="sectionTitle">{t('availability.title')}</Txt>
         <View style={{ width: 24 }} />
       </View>
       <ScrollView contentInsetAdjustmentBehavior="automatic" refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />} contentContainerStyle={styles.content}>
-        <View style={styles.hero}>
+        <View style={[styles.hero, isRTL && styles.rtlRow]}>
           <View style={styles.heroIcon}><Ionicons name="calendar" size={22} color={colors.primary} /></View>
           <View style={{ flex: 1 }}>
-            <Txt variant="cardTitle">Own your week</Txt>
-            <Txt variant="caption" style={{ marginTop: 3 }}>Publish only the times you want clients to book. Tap a time again to remove it.</Txt>
+            <Txt variant="cardTitle">{t('availability.heroTitle')}</Txt>
+            <Txt variant="caption" style={{ marginTop: 3 }}>{t('availability.heroCopy')}</Txt>
           </View>
         </View>
         {error && <Txt variant="caption" color={colors.danger} style={{ marginTop: 12 }}>{error}</Txt>}
 
-        <Txt variant="label" style={styles.label}>Choose a day</Txt>
+        <Txt variant="label" style={styles.label}>{t('availability.chooseDay')}</Txt>
         <DateRangePicker
           selected={day}
           onSelect={setDay}
@@ -102,27 +104,27 @@ export default function TrainerAvailability() {
           countForDate={(date) => slots.filter((slot) => dayjs(slot.starts_at).isSame(date, 'day')).length}
         />
 
-        <View style={styles.openingHead}>
-          <View><Txt variant="label">One-hour openings</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{day.format('dddd, MMMM D')}</Txt></View>
-          <Badge label={`${timeOptions.filter((option) => option.active).length} SELECTED`} tone={timeOptions.some((option) => option.active) ? 'brand' : 'neutral'} />
+        <View style={[styles.openingHead, isRTL && styles.rtlRow]}>
+          <View><Txt variant="label">{t('availability.openings')}</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{day.locale(locale).format('dddd، D MMMM')}</Txt></View>
+          <Badge label={`${timeOptions.filter((option) => option.active).length} ${t('availability.selected')}`} tone={timeOptions.some((option) => option.active) ? 'brand' : 'neutral'} />
         </View>
         <TimeOpeningPicker multiple options={timeOptions} onPress={(option) => toggleTime(option.hour, option.minute)} />
 
-        <View style={styles.sectionHead}>
-          <Txt variant="sectionTitle">Published openings</Txt>
-          <Badge label={`${slots.length} LIVE`} tone={slots.length ? 'success' : 'neutral'} />
+        <View style={[styles.sectionHead, isRTL && styles.rtlRow]}>
+          <Txt variant="sectionTitle">{t('availability.published')}</Txt>
+          <Badge label={`${slots.length} ${t('availability.live')}`} tone={slots.length ? 'success' : 'neutral'} />
         </View>
         {upcoming.length === 0 ? (
-          <Card><EmptyState icon="calendar-outline" title="No openings published" subtitle="Choose a day and tap the times clients may book." /></Card>
+          <Card><EmptyState icon="calendar-outline" title={t('availability.emptyTitle')} subtitle={t('availability.emptyCopy')} /></Card>
         ) : (
           <Card padded={false}>
             {upcoming.map((s, i) => (
-              <View key={s.id} style={[styles.slotRow, i < upcoming.length - 1 && styles.border]}>
+              <View key={s.id} style={[styles.slotRow, isRTL && styles.rtlRow, i < upcoming.length - 1 && styles.border]}>
                 <View style={{ flex: 1 }}>
-                  <Txt variant="bodyStrong">{dayjs(s.starts_at).format('ddd, MMM D · h:mm A')}</Txt>
-                  <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(s.ends_at).diff(dayjs(s.starts_at), 'minute')} minutes {s.is_peak ? '· evening rate' : ''}</Txt>
+                  <Txt variant="bodyStrong">{dayjs(s.starts_at).locale(locale).format('ddd، D MMM · h:mm A')}</Txt>
+                  <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(s.ends_at).diff(dayjs(s.starts_at), 'minute')} {t('availability.minutes')} {s.is_peak ? `· ${t('availability.eveningRate')}` : ''}</Txt>
                 </View>
-                <Pressable hitSlop={10} disabled={s.booked} onPress={() => confirm({ title: 'Remove opening?', message: 'Clients will no longer see this time.', confirmLabel: 'Remove', destructive: true }, async () => { await removeAvailability(s.id); await load(); })}>
+                <Pressable hitSlop={10} disabled={s.booked} onPress={() => confirm({ title: t('availability.removeTitle'), message: t('availability.removeCopy'), confirmLabel: t('availability.remove'), destructive: true }, async () => { await removeAvailability(s.id); await load(); })}>
                   <Ionicons name={s.booked ? 'lock-closed' : 'trash-outline'} size={18} color={s.booked ? colors.textDim : colors.danger} />
                 </Pressable>
               </View>
@@ -136,6 +138,7 @@ export default function TrainerAvailability() {
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 8, paddingBottom: 8 },
   content: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: 22, paddingBottom: 40 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.xl, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder },

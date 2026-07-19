@@ -1,6 +1,7 @@
 import { Text, TextProps, StyleSheet, TextStyle } from 'react-native';
 import { colors, typography } from '@/theme';
 import { useAccessibility } from '@/context/accessibility';
+import { useLocale } from '@/context/locale';
 
 type Variant = keyof typeof typography;
 
@@ -24,6 +25,7 @@ const CONTRAST_LIFT: Record<string, string> = {
  */
 export function Txt({ variant = 'body', color, center, style, ...rest }: Props) {
   const { largeText, highContrast } = useAccessibility();
+  const { isRTL } = useLocale();
 
   const flat = StyleSheet.flatten([
     typography[variant],
@@ -38,6 +40,13 @@ export function Txt({ variant = 'body', color, center, style, ...rest }: Props) 
   }
   if (highContrast && typeof flat.color === 'string' && CONTRAST_LIFT[flat.color]) {
     flat.color = CONTRAST_LIFT[flat.color];
+  }
+  if (isRTL) {
+    flat.writingDirection = 'rtl';
+    if (!flat.textAlign) flat.textAlign = 'right';
+    // Archivo does not contain Arabic glyphs; use the platform's native Arabic font.
+    delete flat.fontFamily;
+    if (typeof flat.letterSpacing === 'number') flat.letterSpacing = 0;
   }
 
   return <Text {...rest} style={flat} />;

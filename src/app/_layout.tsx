@@ -16,6 +16,7 @@ import { SpaceMono_700Bold } from '@expo-google-fonts/space-mono/700Bold';
 import { AuthProvider } from '@/context/auth';
 import { AccessibilityProvider } from '@/context/accessibility';
 import { BookingProvider } from '@/context/booking';
+import { LocaleProvider } from '@/context/locale';
 import { colors } from '@/theme';
 
 SplashScreen.preventAutoHideAsync();
@@ -40,9 +41,10 @@ export default function RootLayout() {
   return (
     <GestureHandlerRootView style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaProvider>
-        <AuthProvider>
-          <AccessibilityProvider>
-          <BookingProvider>
+        <LocaleProvider>
+          <AuthProvider>
+            <AccessibilityProvider>
+            <BookingProvider>
             <StatusBar style="light" />
             <Stack
               screenOptions={{
@@ -66,9 +68,10 @@ export default function RootLayout() {
               <Stack.Screen name="integrations" />
               <Stack.Screen name="membership" />
             </Stack>
-          </BookingProvider>
-          </AccessibilityProvider>
-        </AuthProvider>
+            </BookingProvider>
+            </AccessibilityProvider>
+          </AuthProvider>
+        </LocaleProvider>
       </SafeAreaProvider>
     </GestureHandlerRootView>
   );

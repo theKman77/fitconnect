@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius } from '@/theme';
 import { Txt } from './Txt';
+import { useLocale } from '@/context/locale';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -20,9 +21,10 @@ interface Props {
 export function Button({
   title, onPress, variant = 'primary', disabled, loading, icon, fullWidth = true, style,
 }: Props) {
+  const { isRTL } = useLocale();
   const isPrimary = variant === 'primary';
   const content = (
-    <View style={styles.row}>
+    <View style={[styles.row, isRTL && { flexDirection: 'row-reverse' }]}>
       {loading ? (
         <ActivityIndicator color={isPrimary ? colors.white : colors.textPrimary} />
       ) : (
@@ -32,7 +34,10 @@ export function Button({
               name={icon}
               size={18}
               color={isPrimary ? colors.white : textColor(variant)}
-              style={{ marginRight: 8 }}
+              style={[
+                isRTL ? { marginLeft: 8 } : { marginRight: 8 },
+                isRTL && (icon === 'arrow-forward' || icon === 'chevron-forward') ? { transform: [{ scaleX: -1 }] } : null,
+              ]}
             />
           )}
           <Txt style={[styles.label, { color: isPrimary ? colors.white : textColor(variant) }]}>

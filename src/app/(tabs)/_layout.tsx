@@ -2,8 +2,10 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet, View } from 'react-native';
 import { colors, fonts } from '@/theme';
+import { useLocale } from '@/context/locale';
 
 export default function TabsLayout() {
+  const { t } = useLocale();
   return (
     <Tabs
       screenOptions={{
@@ -25,28 +27,28 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Home',
+          title: t('nav.home'),
           tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'home' : 'home-outline'} color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="discover"
         options={{
-          title: 'Discover',
+          title: t('nav.discover'),
           tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'compass' : 'compass-outline'} color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
-          title: 'Progress',
+          title: t('nav.progress'),
           tabBarIcon: ({ color, size, focused }) => <TabIcon name="trending-up" color={color} size={size} focused={focused} />,
         }}
       />
       <Tabs.Screen
         name="account"
         options={{
-          title: 'Account',
+          title: t('nav.account'),
           tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} color={color} size={size} focused={focused} />,
         }}
       />

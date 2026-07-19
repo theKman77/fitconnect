@@ -2,8 +2,10 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { Platform, StyleSheet, View } from 'react-native';
 import { colors, fonts } from '@/theme';
+import { useLocale } from '@/context/locale';
 
 export default function TrainerLayout() {
+  const { t } = useLocale();
   return (
     <Tabs
       screenOptions={{
@@ -24,19 +26,19 @@ export default function TrainerLayout() {
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Business', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'grid' : 'grid-outline'} size={size} color={color} focused={focused} /> }}
+        options={{ title: t('nav.business'), tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'grid' : 'grid-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="bookings"
-        options={{ title: 'Bookings', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} focused={focused} /> }}
+        options={{ title: t('nav.bookings'), tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="messages"
-        options={{ title: 'Messages', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} focused={focused} /> }}
+        options={{ title: t('nav.messages'), tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="account"
-        options={{ title: 'Account', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} size={size} color={color} focused={focused} /> }}
+        options={{ title: t('nav.account'), tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} size={size} color={color} focused={focused} /> }}
       />
     </Tabs>
   );

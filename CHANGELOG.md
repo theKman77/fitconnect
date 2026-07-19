@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-19 — Arabic/RTL foundation
+
+### Saudi-market localization
+
+- Added a persisted English/Arabic language preference with a switch on the welcome and account screens.
+- Added genuine RTL document direction on web, native-safe RTL handling for shared scheduling controls, Arabic system-font fallback, mirrored directional arrows, and a protected left-to-right Latin wordmark.
+- Localized the welcome experience, client/trainer tab labels, trainer availability workspace, calendar controls, opening states, and Saudi Arabic date/time presentation.
+- Expanded the browser harness to activate Arabic, prove the document direction is RTL, and capture both the Arabic welcome and scheduling screens.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized browser flow passes twelve states/routes, including Arabic welcome and Arabic scheduling, with all six showcase trainers when production data is reachable.
+
 ## 2026-07-19 — Scheduling clarity
 
 ### Date and time selection

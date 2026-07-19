@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import dayjs, { Dayjs } from 'dayjs';
+import 'dayjs/locale/ar';
 import { colors, fonts, radius } from '@/theme';
 import { Txt } from '@/components/ui/Txt';
+import { useLocale } from '@/context/locale';
 
 interface Props {
   selected: Dayjs;
@@ -23,6 +25,7 @@ export function DateRangePicker({
   rangeDays = 14,
   maxDaysAhead = 56,
 }: Props) {
+  const { locale, isRTL, t } = useLocale();
   const today = dayjs().startOf('day');
   const selectedOffset = Math.max(0, selected.startOf('day').diff(today, 'day'));
   const selectedPage = Math.floor(selectedOffset / rangeDays);
@@ -43,24 +46,26 @@ export function DateRangePicker({
   const dates = Array.from({ length: rangeDays }, (_, index) => pageStart.add(index, 'day'));
   const rangeEnd = dates[dates.length - 1];
   const selectedVisible = !selected.startOf('day').isBefore(pageStart) && !selected.startOf('day').isAfter(rangeEnd);
+  const localizedStart = pageStart.locale(locale);
+  const localizedEnd = rangeEnd.locale(locale);
   const rangeLabel = pageStart.isSame(rangeEnd, 'month')
-    ? `${pageStart.format('MMMM D')}–${rangeEnd.format('D, YYYY')}`
-    : `${pageStart.format('MMM D')}–${rangeEnd.format('MMM D, YYYY')}`;
+    ? `${localizedStart.format('MMMM D')} - ${localizedEnd.format('D, YYYY')}`
+    : `${localizedStart.format('MMM D')} - ${localizedEnd.format('MMM D, YYYY')}`;
 
   return (
     <View style={styles.shell}>
-      <View style={styles.header}>
+      <View style={[styles.header, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
         <View style={{ flex: 1 }}>
-          <Txt style={styles.selectedLabel}>{selectedVisible ? selected.format('dddd, MMMM D') : 'Choose a date'}</Txt>
+          <Txt style={styles.selectedLabel}>{selectedVisible ? selected.locale(locale).format('dddd، D MMMM') : t('schedule.chooseDate')}</Txt>
           <Txt style={styles.rangeLabel}>{rangeLabel}</Txt>
         </View>
-        <View style={styles.pager}>
-          <PagerButton icon="chevron-back" disabled={pageIndex === 0} label="Previous two weeks" onPress={() => move(-1)} />
-          <PagerButton icon="chevron-forward" disabled={pageIndex >= lastPage} label="Next two weeks" onPress={() => move(1)} />
+        <View style={[styles.pager, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+          <PagerButton icon={isRTL ? 'chevron-forward' : 'chevron-back'} disabled={pageIndex === 0} label={t('schedule.previous')} onPress={() => move(-1)} />
+          <PagerButton icon={isRTL ? 'chevron-back' : 'chevron-forward'} disabled={pageIndex >= lastPage} label={t('schedule.next')} onPress={() => move(1)} />
         </View>
       </View>
 
-      <View style={styles.grid}>
+      <View style={[styles.grid, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
         {dates.map((date) => {
           const active = date.isSame(selected, 'day');
           const disabled = !!disabledForDate?.(date);
@@ -71,11 +76,11 @@ export function DateRangePicker({
               key={date.format('YYYY-MM-DD')}
               disabled={disabled}
               onPress={() => onSelect(date)}
-              accessibilityLabel={`${date.format('dddd, MMMM D')}${count ? `, ${count} openings` : ''}`}
+              accessibilityLabel={`${date.locale(locale).format('dddd، D MMMM')}${count ? `, ${count}` : ''}`}
               accessibilityState={{ selected: active, disabled }}
               style={({ pressed }) => [styles.day, active && styles.dayActive, disabled && styles.dayDisabled, pressed && !disabled && styles.pressed]}
             >
-              <Txt style={[styles.weekday, active && styles.activeText]}>{date.format('dd').toUpperCase()}</Txt>
+              <Txt style={[styles.weekday, active && styles.activeText]}>{date.locale(locale).format('dd').toUpperCase()}</Txt>
               <Txt style={[styles.number, active && styles.activeText]}>{date.format('D')}</Txt>
               {count > 0
                 ? <View style={[styles.count, active && styles.countActive]}><Txt style={[styles.countText, active && { color: colors.primary }]}>{count}</Txt></View>
@@ -85,9 +90,9 @@ export function DateRangePicker({
         })}
       </View>
 
-      <View style={styles.legend}>
-        <View style={styles.legendItem}><View style={styles.legendDot} /><Txt style={styles.legendText}>Number = openings</Txt></View>
-        <Txt style={styles.legendText}>Tap arrows for more dates</Txt>
+      <View style={[styles.legend, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+        <View style={styles.legendItem}><View style={styles.legendDot} /><Txt style={styles.legendText}>{t('schedule.openingsLegend')}</Txt></View>
+        <Txt style={styles.legendText}>{t('schedule.moreDates')}</Txt>
       </View>
     </View>
   );

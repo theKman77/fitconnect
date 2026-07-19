@@ -2,7 +2,7 @@
 
 ## Current release reality — 2026-07-19
 
-The FitConnect 2.0 visual milestone now includes The Handoff identity, rebuilt welcome and responsive home experiences, goal-led Discover, a proof-led trainer profile, a clearer booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. The next product wave is Arabic/RTL localization, deeper trainer CRM tools, and challenge-based social retention.
+The FitConnect 2.0 visual milestone now includes The Handoff identity, rebuilt bilingual welcome and responsive home experiences, goal-led Discover, a proof-led trainer profile, a clearer booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL localization is now underway with persisted language choice, navigation, welcome, and scheduling complete; the next product wave continues page-by-page translation, deeper trainer CRM tools, and challenge-based social retention.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 
