@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Switch, View } from 'react-native';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,300 +8,355 @@ import dayjs from 'dayjs';
 import { colors, fonts, radius } from '@/theme';
 import { config, formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
-import { getMyTrainer, listTrainerBookings, setTrainerOnline, STATUS_LABEL } from '@/lib/trainer';
-import { tierForSessions, repeatClientFeePct, TRAINER_TIERS } from '@/lib/gamification';
-import { Avatar, Badge, Card, Txt } from '@/components/ui';
+import {
+  getBookingCounterpart,
+  getMyTrainer,
+  listTrainerBookings,
+  setTrainerOnline,
+  STATUS_LABEL,
+  type BookingCounterpart,
+} from '@/lib/trainer';
+import { tierForSessions, repeatClientFeePct } from '@/lib/gamification';
+import { Avatar, Badge, Card, EmptyState, Skeleton, Txt } from '@/components/ui';
 import { notify } from '@/lib/confirm';
 import type { Booking, Trainer } from '@/types/domain';
 
-const ACTIVE: string[] = ['confirmed', 'en_route', 'arriving', 'in_progress'];
+const ACTIVE = ['confirmed', 'en_route', 'arriving', 'in_progress'];
 
-export default function TrainerDashboard() {
+export default function TrainerBusinessHub() {
   const router = useRouter();
   const { profile } = useAuth();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [counterparts, setCounterparts] = useState<Record<string, BookingCounterpart>>({});
   const [online, setOnline] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setLoadError(null);
-      const t = await getMyTrainer(profile);
-      setTrainer(t);
-      setOnline(!!t?.available_now);
-      setBookings(await listTrainerBookings(t));
-    } catch (e: any) {
-      setLoadError(e?.message ?? 'Could not refresh the trainer dashboard.');
+      const value = await getMyTrainer(profile);
+      const nextBookings = await listTrainerBookings(value);
+      setTrainer(value);
+      setOnline(!!value?.available_now);
+      setBookings(nextBookings);
+
+      const latestByClient = new Map<string, Booking>();
+      for (const booking of nextBookings) if (!latestByClient.has(booking.client_id)) latestByClient.set(booking.client_id, booking);
+      const people = await Promise.all(
+        [...latestByClient.values()].slice(0, 8).map(async (booking) => [booking.client_id, await getBookingCounterpart(booking.id).catch(() => null)] as const),
+      );
+      setCounterparts(Object.fromEntries(people.filter((entry): entry is [string, BookingCounterpart] => !!entry[1])));
+    } catch (error: any) {
+      setLoadError(error?.message ?? 'Could not refresh your business hub.');
+    } finally {
+      setLoaded(true);
     }
   }, [profile]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  async function toggleOnline(v: boolean) {
-    setOnline(v);
+  async function toggleOnline(value: boolean) {
+    setOnline(value);
     try {
-      await setTrainerOnline(trainer, v);
-    } catch (e: any) {
-      setOnline(!v);
-      notify('Status not changed', e?.message ?? 'Please try again.');
+      await setTrainerOnline(trainer, value);
+    } catch (error: any) {
+      setOnline(!value);
+      notify('Status not changed', error?.message ?? 'Please try again.');
     }
   }
 
-  // ---- derived ----
-  const upcoming = bookings.filter((b) => ACTIVE.includes(b.status));
-  const completedAll = bookings.filter((b) => b.status === 'completed');
-  const paidCompleted = completedAll.filter((b) => b.paid);
+  const upcoming = useMemo(() => bookings
+    .filter((booking) => ACTIVE.includes(booking.status))
+    .sort((a, b) => (a.scheduled_at ?? '').localeCompare(b.scheduled_at ?? '')), [bookings]);
+  const completed = bookings.filter((booking) => booking.status === 'completed');
+  const paidCompleted = completed.filter((booking) => booking.paid);
+  const earnings = paidCompleted.reduce((sum, booking) => sum + (booking.trainer_payout ?? 0), 0);
+  const monthEarnings = paidCompleted
+    .filter((booking) => dayjs(booking.scheduled_at ?? booking.created_at).isSame(dayjs(), 'month'))
+    .reduce((sum, booking) => sum + (booking.trainer_payout ?? 0), 0);
+  const simulatedPipeline = completed.filter((booking) => !booking.paid).reduce((sum, booking) => sum + (booking.trainer_payout ?? 0), 0);
+  const nextBooking = upcoming[0];
+  const tier = tierForSessions(completed.length);
+
+  const byClient = new Map<string, Booking[]>();
+  for (const booking of completed) byClient.set(booking.client_id, [...(byClient.get(booking.client_id) ?? []), booking]);
+  const clients = [...byClient.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 5);
+  const repeatClients = clients.filter(([, sessions]) => sessions.length > 1).length;
+  const repeatRate = clients.length ? Math.round((repeatClients / clients.length) * 100) : 0;
+
+  const weeks = Array.from({ length: 6 }, (_, index) => dayjs().startOf('week').subtract(5 - index, 'week'));
+  const weekly = weeks.map((week) => paidCompleted
+    .filter((booking) => dayjs(booking.scheduled_at ?? booking.created_at).isSame(week, 'week'))
+    .reduce((sum, booking) => sum + (booking.trainer_payout ?? 0), 0));
+  const maxWeek = Math.max(1, ...weekly);
+
+  const days = Array.from({ length: 7 }, (_, index) => dayjs().add(index, 'day'));
+  const perDay = days.map((date) => upcoming.filter((booking) => booking.scheduled_at && dayjs(booking.scheduled_at).isSame(date, 'day')).length);
+  const bookedDays = perDay.filter(Boolean).length;
   const firstName = (profile?.full_name ?? 'Coach').split(' ')[0];
 
-  // Earnings by week, last 6 weeks (trainer's cut = total - platform fee).
-  const weeks = Array.from({ length: 6 }).map((_, i) => dayjs().startOf('week').subtract(5 - i, 'week'));
-  const weeklyEarnings = weeks.map((w) =>
-    paidCompleted
-      .filter((b) => dayjs(b.scheduled_at ?? b.created_at).isSame(w, 'week'))
-      .reduce((s, b) => s + (b.trainer_payout ?? 0), 0),
-  );
-  const totalEarnings = paidCompleted.reduce((s, b) => s + (b.trainer_payout ?? 0), 0);
-  const demoPipeline = completedAll.filter((b) => !b.paid).reduce((s, b) => s + (b.trainer_payout ?? 0), 0);
-  const maxWeek = Math.max(1, ...weeklyEarnings);
-
-  // Tier ladder — progress accrues only from on-platform completed sessions.
-  const tier = tierForSessions(completedAll.length);
-
-  // Client roster with per-client repeat discount (anti-poaching lever).
-  const byClient = new Map<string, number>();
-  for (const b of completedAll) byClient.set(b.client_id, (byClient.get(b.client_id) ?? 0) + 1);
-  const roster = [...byClient.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5);
-
-  // Week at a glance: sessions per day, next 7 days.
-  const days = Array.from({ length: 7 }).map((_, i) => dayjs().add(i, 'day'));
-  const perDay = days.map((d) => upcoming.filter((b) => b.scheduled_at && dayjs(b.scheduled_at).isSame(d, 'day')).length);
+  const profileSignals = [trainer?.headline, trainer?.bio, trainer?.avatar_url, trainer?.video_intro_url, trainer?.specialties.length, Object.keys(trainer?.socials ?? {}).length];
+  const profileStrength = Math.round((profileSignals.filter(Boolean).length / profileSignals.length) * 100);
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <ScrollView
+        contentInsetAdjustmentBehavior="automatic"
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingBottom: 24 }}
-        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary}
-          onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        {/* Header */}
         <View style={styles.header}>
           <View style={{ flex: 1 }}>
-            <Txt variant="mono" style={{ color: colors.textMuted }}>TRAINER</Txt>
-            <Txt variant="screenTitle" style={{ marginTop: 2 }}>Hi, {firstName}</Txt>
+            <Txt variant="monoTag">TRAINER BUSINESS HUB</Txt>
+            <Txt style={styles.title}>Own your day, {firstName}.</Txt>
           </View>
-          <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={46} />
+          <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={48} />
         </View>
 
-        {/* Online toggle */}
-        <View style={styles.section}>
-          {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
-          {trainer?.onboarding_status && trainer.onboarding_status !== 'approved' && (
-            <Card onPress={() => router.push('/trainer-edit' as any)} style={{ marginBottom: 10, borderColor: colors.primaryBorder }}>
+        {loadError && <Card><EmptyState icon="cloud-offline-outline" title="Hub unavailable" subtitle={loadError} actionLabel="Try again" onAction={load} /></Card>}
+
+        {!loaded ? <DashboardSkeleton /> : (
+          <>
+            <View style={styles.commandCard}>
+              <LinearGradient colors={['#2A1712', colors.surfaceElevated, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              <View style={styles.commandGlow} />
               <View style={styles.onlineRow}>
-                <Ionicons name="document-text-outline" size={20} color={colors.primary} />
+                <View style={[styles.statusDot, { backgroundColor: online ? colors.success : colors.textFaint }]} />
                 <View style={{ flex: 1 }}>
-                  <Txt variant="bodyStrong">Finish trainer setup</Txt>
-                  <Txt variant="caption" style={{ marginTop: 2 }}>Your profile is private until FitConnect approves it.</Txt>
+                  <Txt style={styles.onlineTitle}>{online ? 'Open for new clients' : 'Not taking instant bookings'}</Txt>
+                  <Txt style={styles.onlineCopy}>{online ? 'Your profile is visible as available now.' : 'Your published schedule is still bookable.'}</Txt>
                 </View>
+                <Switch value={online} onValueChange={toggleOnline} trackColor={{ false: colors.surfaceHigh, true: colors.success }} thumbColor={colors.white} />
+              </View>
+
+              <View style={styles.commandDivider} />
+              {nextBooking ? (
+                <Pressable onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: nextBooking.id } })} style={styles.nextSession}>
+                  <View style={styles.timeTile}>
+                    <Txt style={styles.timeMain}>{dayjs(nextBooking.scheduled_at).format('h:mm')}</Txt>
+                    <Txt style={styles.timePeriod}>{dayjs(nextBooking.scheduled_at).format('A')}</Txt>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Txt variant="monoTag">NEXT UP · {dayjs(nextBooking.scheduled_at).format('ddd').toUpperCase()}</Txt>
+                    <Txt variant="bodyStrong" style={{ marginTop: 5 }}>{counterparts[nextBooking.client_id]?.full_name ?? 'Client session'}</Txt>
+                    <Txt variant="caption" style={{ marginTop: 3 }}>{nextBooking.format === 'virtual' ? 'Virtual coaching' : nextBooking.city ?? 'In person'} · {nextBooking.duration_min} min</Txt>
+                  </View>
+                  <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+                </Pressable>
+              ) : (
+                <Pressable onPress={() => router.push('/trainer-availability' as any)} style={styles.nextSession}>
+                  <View style={styles.emptyNextIcon}><Ionicons name="calendar-outline" size={21} color={colors.primary} /></View>
+                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">Turn empty hours into bookable time</Txt><Txt variant="caption" style={{ marginTop: 3 }}>Publish openings clients can reserve instantly.</Txt></View>
+                  <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+                </Pressable>
+              )}
+            </View>
+
+            {trainer?.onboarding_status && trainer.onboarding_status !== 'approved' && (
+              <Pressable onPress={() => router.push('/trainer-edit' as any)} style={styles.reviewBanner}>
+                <Ionicons name="document-text-outline" size={19} color={colors.primary} />
+                <View style={{ flex: 1 }}><Txt variant="bodyStrong">Finish your trainer application</Txt><Txt variant="caption" style={{ marginTop: 2 }}>Your public profile stays hidden until it is approved.</Txt></View>
                 <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-              </View>
-            </Card>
-          )}
-          <Card style={online ? styles.onlineCard : undefined}>
-            <View style={styles.onlineRow}>
-              <View style={[styles.pulse, { backgroundColor: online ? colors.success : colors.textFaint }]} />
-              <View style={{ flex: 1 }}>
-                <Txt variant="cardTitle">{online ? "You're online" : "You're offline"}</Txt>
-                <Txt variant="caption" style={{ marginTop: 2 }}>
-                  {online ? 'Clients can book you now' : 'Go online to receive bookings'}
-                </Txt>
-              </View>
-              <Switch value={online} onValueChange={toggleOnline}
-                trackColor={{ false: colors.surfaceHigh, true: colors.success }} thumbColor={colors.white} />
-            </View>
-          </Card>
-        </View>
-
-        {/* Tier ladder */}
-        <View style={styles.section}>
-          <Card onPress={() => router.push('/trainer-availability' as any)}>
-            <View style={styles.onlineRow}>
-              <View style={styles.bookingIcon}><Ionicons name="calendar" size={18} color={colors.primary} /></View>
-              <View style={{ flex: 1 }}><Txt variant="bodyStrong">Publish your schedule</Txt><Txt variant="caption" style={{ marginTop: 2 }}>Open and close bookable times in two taps</Txt></View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
-            </View>
-          </Card>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.tierCard}>
-            <LinearGradient colors={[colors.primary, colors.primaryDeep]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
-            <View style={styles.tierTop}>
-              <View style={{ flex: 1 }}>
-                <Txt style={styles.tierName}>
-                  <Ionicons name={tier.current.icon} size={18} color={colors.white} />  {tier.current.name} trainer
-                </Txt>
-                <Txt style={styles.tierSub}>Platform fee: {tier.current.feePct}% · {completedAll.length} sessions completed</Txt>
-              </View>
-            </View>
-            {tier.next && (
-              <>
-                <View style={styles.tierTrack}>
-                  <View style={[styles.tierFill, { width: `${Math.max(4, tier.progress * 100)}%` }]} />
-                </View>
-                <Txt style={styles.tierNext}>
-                  {tier.next.minSessions - completedAll.length} sessions to {tier.next.name} — fee drops to {tier.next.feePct}%, {tier.next.perks[0].toLowerCase()}
-                </Txt>
-              </>
+              </Pressable>
             )}
-          </View>
-        </View>
 
-        {/* Earnings */}
-        <View style={styles.section}>
-          <View style={styles.sectionHead}>
-            <Txt variant="sectionTitle">Earnings</Txt>
-            <Txt style={styles.earningsTotal}>{formatMoney(totalEarnings)}</Txt>
-          </View>
-          <Card style={{ marginTop: 12 }}>
-            <View style={styles.chart}>
-              {weeklyEarnings.map((v, i) => (
-                <View key={i} style={styles.chartCol}>
-                  <View style={[styles.chartBar, { height: 8 + (v / maxWeek) * 56, opacity: v === 0 ? 0.25 : 0.9 }]} />
-                  <Txt style={styles.chartLbl}>{weeks[i].format('D/M')}</Txt>
+            <View style={styles.quickGrid}>
+              <QuickAction icon="calendar" label="Schedule" meta={`${bookedDays}/7 active days`} onPress={() => router.push('/trainer-availability' as any)} />
+              <QuickAction icon="sparkles" label="Public profile" meta={`${profileStrength}% complete`} onPress={() => trainer ? router.push(`/trainer/${trainer.id}`) : router.push('/trainer-edit' as any)} />
+              <QuickAction icon="create-outline" label="Edit offer" meta={`From ${formatMoney(trainer?.base_price ?? 0)}`} onPress={() => router.push('/trainer-edit' as any)} />
+            </View>
+
+            <View style={styles.sectionHead}>
+              <View><Txt variant="monoTag">BUSINESS PULSE</Txt><Txt style={styles.sectionTitle}>The numbers that matter</Txt></View>
+            </View>
+            <View style={styles.metrics}>
+              <Metric value={formatMoney(config.paymentsEnabled ? monthEarnings : simulatedPipeline)} label={config.paymentsEnabled ? 'This month' : 'Demo pipeline'} icon={config.paymentsEnabled ? 'wallet' : 'flask'} />
+              <Metric value={`${upcoming.length}`} label="Upcoming" icon="calendar-outline" />
+              <Metric value={`${repeatRate}%`} label="Repeat clients" icon="repeat" />
+            </View>
+
+            <View style={styles.tierCard}>
+              <View style={styles.tierTop}>
+                <View style={styles.tierShield}><Ionicons name={tier.current.icon} size={23} color={colors.primary} /></View>
+                <View style={{ flex: 1 }}>
+                  <Txt variant="monoTag">FITCONNECT PARTNER LEVEL</Txt>
+                  <Txt style={styles.tierTitle}>{tier.current.name} · {tier.current.feePct}% platform fee</Txt>
+                </View>
+                <Badge label={`${completed.length} SESSIONS`} tone="neutral" />
+              </View>
+              {tier.next ? (
+                <>
+                  <View style={styles.tierTrack}><View style={[styles.tierFill, { width: `${Math.max(4, tier.progress * 100)}%` }]} /></View>
+                  <Txt variant="caption" style={{ marginTop: 9 }}>{tier.next.minSessions - completed.length} on-platform sessions to {tier.next.name}: {tier.next.feePct}% fee and {tier.next.perks[0].toLowerCase()}.</Txt>
+                </>
+              ) : <Txt variant="caption" style={{ marginTop: 10 }}>Elite status keeps your lowest fee, top discovery position, and future partner perks.</Txt>}
+            </View>
+
+            <View style={styles.valueCard}>
+              <View style={styles.valueTop}>
+                <View style={styles.valueMark}><Ionicons name="infinite" size={22} color={colors.white} /></View>
+                <View style={{ flex: 1 }}><Txt style={styles.valueTitle}>Your client book compounds here.</Txt><Txt variant="body" style={{ marginTop: 5 }}>Every completed session improves retention economics instead of resetting the relationship.</Txt></View>
+              </View>
+              <View style={styles.valueList}>
+                <ValueLine icon="trending-down" text="Repeat-client fees can fall as low as 3%." />
+                <ValueLine icon="people" text="Session history and rebooking stay organized per client." />
+                <ValueLine icon="shield-checkmark" text="Payment records, support, progress, and discovery remain attached." />
+              </View>
+            </View>
+
+            <View style={styles.sectionHead}>
+              <View><Txt variant="monoTag">RELATIONSHIPS</Txt><Txt style={styles.sectionTitle}>Clients worth keeping</Txt></View>
+              <Pressable onPress={() => router.push('/(trainer)/bookings')}><Txt style={styles.link}>All bookings</Txt></Pressable>
+            </View>
+            {clients.length === 0 ? (
+              <Card><EmptyState icon="people-outline" title="Your client book starts here" subtitle="Completed sessions become organized client relationships with better repeat-client economics." /></Card>
+            ) : (
+              <Card padded={false}>
+                {clients.map(([clientId, sessions], index) => {
+                  const person = counterparts[clientId];
+                  const fee = repeatClientFeePct(sessions.length, tier.current.feePct);
+                  const latest = [...sessions].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+                  return (
+                    <Pressable key={clientId} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: latest.id } })} style={[styles.clientRow, index < clients.length - 1 && styles.rowBorder]}>
+                      <Avatar uri={person?.avatar_url} name={person?.full_name ?? 'Client'} size={44} />
+                      <View style={{ flex: 1 }}>
+                        <Txt variant="bodyStrong">{person?.full_name ?? 'Client'}</Txt>
+                        <Txt variant="caption" style={{ marginTop: 3 }}>{sessions.length} session{sessions.length === 1 ? '' : 's'} together · {dayjs(latest.scheduled_at ?? latest.created_at).format('MMM D')}</Txt>
+                      </View>
+                      <View style={{ alignItems: 'flex-end', gap: 5 }}><Badge label={`${fee}% FEE`} tone={fee < tier.current.feePct ? 'success' : 'neutral'} /><Txt style={styles.rebook}>Follow up →</Txt></View>
+                    </Pressable>
+                  );
+                })}
+              </Card>
+            )}
+
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">FORWARD VIEW</Txt><Txt style={styles.sectionTitle}>Next seven days</Txt></View></View>
+            <View style={styles.weekRow}>
+              {days.map((date, index) => (
+                <View key={date.format('YYYY-MM-DD')} style={[styles.dayCell, perDay[index] > 0 && styles.dayCellOn]}>
+                  <Txt style={[styles.dayName, perDay[index] > 0 && { color: colors.primary }]}>{date.format('dd').slice(0, 1)}</Txt>
+                  <Txt style={styles.dayNumber}>{date.format('D')}</Txt>
+                  <View style={[styles.dayCount, perDay[index] > 0 && styles.dayCountOn]}><Txt style={[styles.dayCountText, perDay[index] > 0 && { color: colors.white }]}>{perDay[index]}</Txt></View>
                 </View>
               ))}
             </View>
-            <View style={styles.protectRow}>
-              <Ionicons name={config.paymentsEnabled ? 'shield-checkmark' : 'flask'} size={14} color={config.paymentsEnabled ? colors.success : colors.primary} />
-              <Txt variant="caption" style={{ flex: 1 }}>
-                {config.paymentsEnabled ? 'Paid, completed sessions are eligible for payout.' : `Demo mode: no cash is payable. Simulated pipeline value ${formatMoney(demoPipeline)}.`}
-              </Txt>
-            </View>
-          </Card>
-        </View>
 
-        {/* Week at a glance */}
-        <View style={styles.section}>
-          <Txt variant="sectionTitle" style={{ marginBottom: 12 }}>This week</Txt>
-          <View style={styles.weekRow}>
-            {days.map((d, i) => (
-              <View key={i} style={[styles.dayCell, perDay[i] > 0 && styles.dayCellOn]}>
-                <Txt style={[styles.dayLbl, perDay[i] > 0 && { color: colors.primary }]}>{d.format('dd')[0]}</Txt>
-                <Txt style={[styles.dayNum, perDay[i] > 0 && { color: colors.textPrimary }]}>{d.format('D')}</Txt>
-                {perDay[i] > 0 && <View style={styles.dayDot} />}
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Client roster */}
-        <View style={styles.section}>
-          <Txt variant="sectionTitle" style={{ marginBottom: 4 }}>Your clients</Txt>
-          <Txt variant="caption" style={{ marginBottom: 12 }}>
-            Your fee drops the longer a client stays with you.
-          </Txt>
-          {roster.length === 0 ? (
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">EARNINGS TREND</Txt><Txt style={styles.sectionTitle}>{config.paymentsEnabled ? formatMoney(earnings) : 'Ready for live payments'}</Txt></View></View>
             <Card>
-              <View style={styles.emptyRoster}>
-                <Ionicons name="people" size={22} color={colors.textFaint} />
-                <Txt variant="caption" style={{ flex: 1 }}>
-                  Clients you complete sessions with appear here, with their loyalty fee discount.
-                </Txt>
+              <View style={styles.chart}>
+                {weekly.map((value, index) => (
+                  <View key={weeks[index].format('YYYY-MM-DD')} style={styles.chartColumn}>
+                    <View style={[styles.chartBar, { height: 8 + (value / maxWeek) * 64, opacity: value ? 1 : 0.2 }]} />
+                    <Txt style={styles.chartLabel}>{weeks[index].format('D/M')}</Txt>
+                  </View>
+                ))}
+              </View>
+              <View style={styles.protectionRow}>
+                <Ionicons name={config.paymentsEnabled ? 'shield-checkmark' : 'business-outline'} size={16} color={config.paymentsEnabled ? colors.success : colors.primary} />
+                <Txt variant="caption" style={{ flex: 1 }}>{config.paymentsEnabled ? 'Paid, completed sessions are eligible for settlement.' : 'Your CR and Moyasar approval are the only missing steps before tracked bookings can become real payouts.'}</Txt>
               </View>
             </Card>
-          ) : (
-            <Card padded={false}>
-              {roster.map(([clientId, count], i) => {
-                const fee = repeatClientFeePct(count, tier.current.feePct);
-                return (
-                  <View key={clientId} style={[styles.clientRow, i < roster.length - 1 && styles.clientBorder]}>
-                    <Avatar name={`C ${i + 1}`} size={40} />
-                    <View style={{ flex: 1 }}>
-                      <Txt variant="bodyStrong">Client</Txt>
-                      <Txt variant="caption" style={{ marginTop: 2 }}>{count} session{count === 1 ? '' : 's'} together</Txt>
-                    </View>
-                    <Badge label={`${fee}% FEE`} tone={fee < tier.current.feePct ? 'success' : 'neutral'} />
-                  </View>
-                );
-              })}
-            </Card>
-          )}
-        </View>
 
-        {/* Upcoming sessions */}
-        <View style={styles.section}>
-          <Txt variant="sectionTitle" style={{ marginBottom: 12 }}>Upcoming sessions</Txt>
-          <View style={{ gap: 10 }}>
-            {upcoming.map((b) => (
-              <Card key={b.id} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: b.id } })}>
-                <View style={styles.bookingRow}>
-                  <View style={styles.bookingIcon}><Ionicons name="barbell" size={18} color={colors.primary} /></View>
-                  <View style={{ flex: 1 }}>
-                    <Txt variant="bodyStrong">
-                      {b.scheduled_at ? dayjs(b.scheduled_at).format('ddd, MMM D · h:mm A') : 'Session'}
-                    </Txt>
-                    <Txt variant="caption" style={{ marginTop: 2 }}>
-                      {b.format === 'virtual' ? 'Virtual' : b.address_line ?? 'In person'}
-                    </Txt>
-                  </View>
-                  <Badge label={STATUS_LABEL[b.status].toUpperCase()} tone={b.status === 'in_progress' ? 'success' : 'brand'} />
-                </View>
-              </Card>
-            ))}
-            {upcoming.length === 0 && (
-              <Card>
-                <View style={styles.emptyRoster}>
-                  <Ionicons name="calendar-outline" size={22} color={colors.textFaint} />
-                  <Txt variant="caption" style={{ flex: 1 }}>No upcoming sessions. Go online so clients can book you.</Txt>
-                </View>
-              </Card>
-            )}
-          </View>
-        </View>
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">SESSIONS</Txt><Txt style={styles.sectionTitle}>Coming up</Txt></View></View>
+            <View style={{ gap: 10 }}>
+              {upcoming.slice(0, 4).map((booking) => (
+                <Pressable key={booking.id} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: booking.id } })} style={styles.bookingCard}>
+                  <View style={styles.bookingDate}><Txt style={styles.bookingDay}>{dayjs(booking.scheduled_at).format('DD')}</Txt><Txt style={styles.bookingMonth}>{dayjs(booking.scheduled_at).format('MMM').toUpperCase()}</Txt></View>
+                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">{counterparts[booking.client_id]?.full_name ?? 'Client session'}</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{dayjs(booking.scheduled_at).format('h:mm A')} · {booking.format === 'virtual' ? 'Virtual' : booking.city ?? 'In person'}</Txt></View>
+                  <Badge label={STATUS_LABEL[booking.status].toUpperCase()} tone={booking.status === 'in_progress' ? 'success' : 'brand'} />
+                </Pressable>
+              ))}
+              {upcoming.length === 0 && <Card><EmptyState icon="calendar-outline" title="No sessions scheduled" subtitle="Publish openings or go online to make the next booking easy." actionLabel="Open schedule" onAction={() => router.push('/trainer-availability' as any)} /></Card>}
+            </View>
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
+function QuickAction({ icon, label, meta, onPress }: { icon: keyof typeof Ionicons.glyphMap; label: string; meta: string; onPress: () => void }) {
+  return <Pressable onPress={onPress} style={({ pressed }) => [styles.quickAction, pressed && styles.pressed]}><View style={styles.quickIcon}><Ionicons name={icon} size={19} color={colors.primary} /></View><Txt style={styles.quickLabel}>{label}</Txt><Txt style={styles.quickMeta} numberOfLines={1}>{meta}</Txt></Pressable>;
+}
+
+function Metric({ value, label, icon }: { value: string; label: string; icon: keyof typeof Ionicons.glyphMap }) {
+  return <View style={styles.metric}><Ionicons name={icon} size={17} color={colors.primary} /><Txt style={styles.metricValue} numberOfLines={1}>{value}</Txt><Txt style={styles.metricLabel}>{label}</Txt></View>;
+}
+
+function ValueLine({ icon, text }: { icon: keyof typeof Ionicons.glyphMap; text: string }) {
+  return <View style={styles.valueLine}><Ionicons name={icon} size={16} color={colors.primaryLight} /><Txt style={styles.valueText}>{text}</Txt></View>;
+}
+
+function DashboardSkeleton() {
+  return <View style={{ gap: 14 }}><Skeleton height={210} /><View style={{ flexDirection: 'row', gap: 10 }}><Skeleton width="32%" height={105} /><Skeleton width="32%" height={105} /><Skeleton width="32%" height={105} /></View><Skeleton height={130} /><Skeleton height={180} /></View>;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
-  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingHorizontal: 22, paddingTop: 12, paddingBottom: 6 },
-  section: { paddingHorizontal: 22, marginTop: 16 },
-  sectionHead: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between' },
-  onlineCard: { borderColor: 'rgba(59,209,111,0.4)' },
-  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  pulse: { width: 12, height: 12, borderRadius: 6 },
-
-  tierCard: { borderRadius: radius.xl, overflow: 'hidden', padding: 18 },
-  tierTop: { flexDirection: 'row', alignItems: 'center' },
-  tierName: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.white },
-  tierSub: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.85)', marginTop: 4 },
-  tierTrack: { height: 7, borderRadius: 4, backgroundColor: 'rgba(255,255,255,0.25)', overflow: 'hidden', marginTop: 16 },
-  tierFill: { height: '100%', backgroundColor: colors.white, borderRadius: 4 },
-  tierNext: { fontFamily: fonts.medium, fontSize: 11, color: 'rgba(255,255,255,0.85)', marginTop: 8 },
-
-  earningsTotal: { fontFamily: fonts.extrabold, fontSize: 18, color: colors.textPrimary },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 8, height: 84 },
-  chartCol: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 6 },
-  chartBar: { width: '62%', backgroundColor: colors.primary, borderRadius: 4 },
-  chartLbl: { fontFamily: fonts.mono, fontSize: 9, color: colors.textDim },
-  protectRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 14, paddingTop: 12, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
-
-  weekRow: { flexDirection: 'row', gap: 8 },
-  dayCell: { flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: radius.md, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, gap: 3 },
-  dayCellOn: { borderColor: colors.primaryBorder, backgroundColor: colors.primaryTint },
-  dayLbl: { fontFamily: fonts.monoBold, fontSize: 10, color: colors.textDim },
-  dayNum: { fontFamily: fonts.bold, fontSize: 14, color: colors.textMuted },
-  dayDot: { width: 5, height: 5, borderRadius: 3, backgroundColor: colors.primary },
-
+  content: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 34, gap: 14, width: '100%', maxWidth: 760, alignSelf: 'center' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 4 },
+  title: { fontFamily: fonts.extrabold, fontSize: 31, lineHeight: 35, letterSpacing: -1.25, color: colors.textPrimary, marginTop: 6 },
+  commandCard: { minHeight: 210, borderRadius: radius.xxl, overflow: 'hidden', padding: 18, borderWidth: 1, borderColor: colors.primaryBorder },
+  commandGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -90, top: -110, backgroundColor: colors.primaryTintStrong },
+  onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  statusDot: { width: 10, height: 10, borderRadius: 5 },
+  onlineTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.textPrimary },
+  onlineCopy: { fontFamily: fonts.regular, fontSize: 11, color: colors.textMuted, marginTop: 3 },
+  commandDivider: { height: 1, backgroundColor: colors.border, marginVertical: 17 },
+  nextSession: { flexDirection: 'row', alignItems: 'center', gap: 13 },
+  timeTile: { minWidth: 66, height: 66, borderRadius: radius.lg, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  timeMain: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.white },
+  timePeriod: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 0.8, color: 'rgba(255,255,255,0.78)' },
+  emptyNextIcon: { width: 54, height: 54, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
+  reviewBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.xl, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder, padding: 15 },
+  quickGrid: { flexDirection: 'row', gap: 9 },
+  quickAction: { flex: 1, minWidth: 0, minHeight: 112, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, padding: 13 },
+  quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
+  quickLabel: { fontFamily: fonts.bold, fontSize: 12, color: colors.textPrimary, marginTop: 12 },
+  quickMeta: { fontFamily: fonts.regular, fontSize: 9, color: colors.textDim, marginTop: 3 },
+  pressed: { opacity: 0.9, transform: [{ scale: 0.985 }] },
+  sectionHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, paddingTop: 14 },
+  sectionTitle: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 26, letterSpacing: -0.65, color: colors.textPrimary, marginTop: 5 },
+  link: { fontFamily: fonts.bold, fontSize: 12, color: colors.primary },
+  metrics: { flexDirection: 'row', gap: 9 },
+  metric: { flex: 1, minWidth: 0, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, padding: 14 },
+  metricValue: { fontFamily: fonts.extrabold, fontSize: 17, letterSpacing: -0.5, color: colors.textPrimary, marginTop: 10 },
+  metricLabel: { fontFamily: fonts.medium, fontSize: 9, color: colors.textDim, marginTop: 3 },
+  tierCard: { borderRadius: radius.xxl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primaryBorder, padding: 18 },
+  tierTop: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  tierShield: { width: 48, height: 48, borderRadius: 17, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
+  tierTitle: { fontFamily: fonts.bold, fontSize: 15, color: colors.textPrimary, marginTop: 4 },
+  tierTrack: { height: 7, borderRadius: 4, backgroundColor: colors.surfaceHigh, overflow: 'hidden', marginTop: 16 },
+  tierFill: { height: '100%', borderRadius: 4, backgroundColor: colors.primary },
+  valueCard: { borderRadius: radius.xxl, overflow: 'hidden', backgroundColor: '#25130F', borderWidth: 1, borderColor: colors.primaryBorder, padding: 18 },
+  valueTop: { flexDirection: 'row', gap: 13 },
+  valueMark: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  valueTitle: { fontFamily: fonts.bold, fontSize: 18, lineHeight: 22, color: colors.textPrimary },
+  valueList: { gap: 10, marginTop: 17, paddingTop: 15, borderTopWidth: 1, borderTopColor: colors.primaryBorder },
+  valueLine: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  valueText: { flex: 1, fontFamily: fonts.medium, fontSize: 12, lineHeight: 17, color: colors.textSecondary },
   clientRow: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 14 },
-  clientBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
-  emptyRoster: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-
-  bookingRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  bookingIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  rowBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  rebook: { fontFamily: fonts.bold, fontSize: 9, color: colors.primary },
+  weekRow: { flexDirection: 'row', gap: 6 },
+  dayCell: { flex: 1, minWidth: 0, alignItems: 'center', gap: 5, paddingVertical: 10, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle },
+  dayCellOn: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },
+  dayName: { fontFamily: fonts.monoBold, fontSize: 9, color: colors.textDim },
+  dayNumber: { fontFamily: fonts.bold, fontSize: 14, color: colors.textPrimary },
+  dayCount: { minWidth: 19, height: 19, borderRadius: 10, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceHigh },
+  dayCountOn: { backgroundColor: colors.primary },
+  dayCountText: { fontFamily: fonts.bold, fontSize: 9, color: colors.textDim },
+  chart: { flexDirection: 'row', alignItems: 'flex-end', gap: 10, height: 94 },
+  chartColumn: { flex: 1, alignItems: 'center', justifyContent: 'flex-end', gap: 7 },
+  chartBar: { width: '66%', borderRadius: 5, backgroundColor: colors.primary },
+  chartLabel: { fontFamily: fonts.mono, fontSize: 8, color: colors.textDim },
+  protectionRow: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 14, paddingTop: 13, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  bookingCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, padding: 11 },
+  bookingDate: { width: 52, height: 56, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
+  bookingDay: { fontFamily: fonts.extrabold, fontSize: 18, color: colors.textPrimary },
+  bookingMonth: { fontFamily: fonts.monoBold, fontSize: 8, color: colors.primary, letterSpacing: 0.7 },
 });

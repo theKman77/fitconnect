@@ -71,6 +71,8 @@ export default function TrainerAccount() {
               onPress={() => router.push('/trainer-availability' as any)} />
             <Row icon="wallet" label="Payouts" value="Needs Moyasar"
               onPress={() => notify('Payouts', 'Payouts to your IBAN switch on with live Moyasar payments. Your earnings are tracked on the Today tab meanwhile.')} />
+            <Row icon="extension-puzzle" label="Integrations" value="4 ready"
+              onPress={() => router.push('/integrations' as any)} />
             <Row icon="star" label="Reviews" value={trainer ? `${trainer.rating.toFixed(1)} (${trainer.review_count})` : '—'}
               onPress={() => trainer && router.push(`/trainer/${trainer.id}`)} last />
           </Card>

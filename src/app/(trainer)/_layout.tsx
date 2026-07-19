@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform } from 'react-native';
+import { Platform, StyleSheet, View } from 'react-native';
 import { colors, fonts } from '@/theme';
 
 export default function TrainerLayout() {
@@ -11,32 +11,42 @@ export default function TrainerLayout() {
         tabBarActiveTintColor: colors.primary,
         tabBarInactiveTintColor: colors.textDim,
         tabBarStyle: {
-          backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-          height: Platform.OS === 'ios' ? 88 : 66,
-          paddingTop: 8,
+          backgroundColor: colors.surfaceElevated,
+          borderTopColor: colors.borderSubtle,
+          borderTopWidth: StyleSheet.hairlineWidth,
+          height: Platform.OS === 'ios' ? 90 : 70,
+          paddingTop: 9,
           paddingBottom: Platform.OS === 'ios' ? 30 : 10,
         },
-        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 11 },
+        tabBarLabelStyle: { fontFamily: fonts.semibold, fontSize: 10, marginTop: 2 },
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Today', tabBarIcon: ({ color, size }) => <Ionicons name="today" size={size} color={color} /> }}
+        options={{ title: 'Business', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'grid' : 'grid-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="bookings"
-        options={{ title: 'Bookings', tabBarIcon: ({ color, size }) => <Ionicons name="calendar" size={size} color={color} /> }}
+        options={{ title: 'Bookings', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'calendar' : 'calendar-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="messages"
-        options={{ title: 'Messages', tabBarIcon: ({ color, size }) => <Ionicons name="chatbubbles" size={size} color={color} /> }}
+        options={{ title: 'Messages', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'chatbubbles' : 'chatbubbles-outline'} size={size} color={color} focused={focused} /> }}
       />
       <Tabs.Screen
         name="account"
-        options={{ title: 'Account', tabBarIcon: ({ color, size }) => <Ionicons name="person" size={size} color={color} /> }}
+        options={{ title: 'Account', tabBarIcon: ({ color, size, focused }) => <TabIcon name={focused ? 'person' : 'person-outline'} size={size} color={color} focused={focused} /> }}
       />
     </Tabs>
   );
 }
+
+function TabIcon({ name, color, size, focused }: { name: keyof typeof Ionicons.glyphMap; color: string; size: number; focused: boolean }) {
+  return <View style={[styles.icon, focused && styles.iconActive]}><Ionicons name={name} size={focused ? size - 1 : size} color={color} /></View>;
+}
+
+const styles = StyleSheet.create({
+  icon: { width: 38, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  iconActive: { backgroundColor: colors.primaryTintStrong },
+});

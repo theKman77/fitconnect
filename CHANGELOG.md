@@ -1,5 +1,26 @@
 # Changelog
 
+## 2026-07-19 — Trainer Business Hub and session payoff
+
+### Trainer retention value
+
+- Rebuilt the trainer Today tab as a responsive Business Hub centered on the next action, current availability, revenue readiness, schedule coverage, repeat-client rate, and client follow-up.
+- Made FitConnect's anti-poaching value explicit and functional: progressive trainer tiers, repeat-client fee decay, persistent client/session history, rebooking paths, profile strength, schedule publishing, and payment/discovery protection.
+- Resolved client identities through the participant-protected booking counterpart function instead of exposing profile rows, while limiting dashboard lookups to recent client relationships.
+- Upgraded trainer navigation and added direct access to the Integrations Hub from the trainer account.
+
+### Client engagement
+
+- Rebuilt the completed-session rating screen into an animated celebration with accurate session duration, +50 XP, weekly streak, weekly mission progress, progress-photo capture, trainer feedback, and a direct handoff into Progress.
+- Added a reduced-motion fallback so the celebration resolves instantly when the device accessibility preference requests it.
+- Expanded the browser harness to verify and capture the new celebration state without creating fake database records.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized browser flow now passes nine public routes, including the post-session celebration, with no serious console errors.
+
 ## 2026-07-19 — Handoff identity and marketplace experience
 
 ### Brand and visual system

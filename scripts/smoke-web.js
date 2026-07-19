@@ -50,13 +50,18 @@ let smokeBrowser = null;
   await page.getByText('Connected experience', { exact: false }).waitFor();
   await page.getByText('WhatsApp', { exact: true }).waitFor();
 
+  await page.goto(`${baseUrl}/session/00000000-0000-4000-8000-000000000000/rate?preview=1`, { waitUntil: 'networkidle' });
+  await page.getByText('You showed up.', { exact: true }).waitFor();
+  await page.getByText('SESSION COMPLETE', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-celebration.png'), fullPage: true });
+
   await page.goto(`${baseUrl}/reset-password`, { waitUntil: 'networkidle' });
   await page.getByText('Choose a new password', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-smoke.png'), fullPage: true });
 
   const serious = errors.filter((e) => !e.includes('favicon') && !e.includes('net::ERR_ABORTED'));
   if (serious.length) throw new Error(`Browser errors: ${serious.join(' | ')}; responses: ${badResponses.join(' | ')}`);
-  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'integrations', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), path.join(os.tmpdir(), 'fitconnect-trainer.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
+  console.log(JSON.stringify({ ok: true, pages: ['welcome', 'sign-up', 'discover', 'trainer', 'booking', 'payments', 'integrations', 'celebration', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), path.join(os.tmpdir(), 'fitconnect-trainer.png'), path.join(os.tmpdir(), 'fitconnect-celebration.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
   await smokeBrowser.close();
   smokeServer?.kill();
 })().catch(async (e) => {
