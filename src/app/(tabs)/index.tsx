@@ -13,13 +13,7 @@ import { listFavoriteIds, onFavoritesChange } from '@/lib/favorites';
 import { Avatar, Brand, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
-
-function greeting(): string {
-  const h = new Date().getHours();
-  if (h < 12) return 'Good morning';
-  if (h < 18) return 'Good afternoon';
-  return 'Good evening';
-}
+import { useLocale } from '@/context/locale';
 
 export default function Home() {
   const router = useRouter();
@@ -27,6 +21,7 @@ export default function Home() {
   const wide = width >= 900;
   const { profile } = useAuth();
   const { start } = useBooking();
+  const { isRTL, t } = useLocale();
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
@@ -34,11 +29,11 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    listTrainers().then((t) => { setTrainers(t); setLoading(false); }).catch(() => { setError('Could not load trainers.'); setLoading(false); });
+    listTrainers().then((rows) => { setTrainers(rows); setLoading(false); }).catch(() => { setError(t('home.loadError')); setLoading(false); });
     const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setFavoriteIds);
     load();
     return onFavoritesChange(load);
-  }, [profile?.id]);
+  }, [profile?.id, t]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -47,13 +42,16 @@ export default function Home() {
       setTrainers(await listTrainers());
       setFavoriteIds(await listFavoriteIds(profile?.id ?? 'demo-client'));
     } catch {
-      setError('Could not refresh trainers. Check your connection.');
+      setError(t('home.refreshError'));
     } finally {
       setRefreshing(false);
     }
-  }, [profile?.id]);
+  }, [profile?.id, t]);
 
-  const firstName = (profile?.full_name ?? 'there').split(' ')[0];
+  const firstName = (profile?.full_name ?? t('home.there')).split(' ')[0];
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? t('home.morning') : hour < 18 ? t('home.afternoon') : t('home.evening');
+  const rtlRow = isRTL ? styles.rtlRow : undefined;
   const favorite = trainers.find((t) => favoriteIds.includes(t.id)) ?? trainers[0];
   const topRated = [...trainers].sort((a, b) => b.rating - a.rating).slice(0, wide ? 4 : 6);
   const open = (id: string) => router.push(`/trainer/${id}`);
@@ -67,7 +65,7 @@ export default function Home() {
       start(detail, plans, plans.find((p) => p.popular) ?? plans[0]);
       router.push(`/booking/${favorite.id}`);
     } catch {
-      setError('Could not open this trainer. Please try again.');
+      setError(t('home.openError'));
     }
   }
 
@@ -80,7 +78,7 @@ export default function Home() {
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />}
       >
         <View style={styles.page}>
-          <View style={styles.topbar}>
+          <View style={[styles.topbar, rtlRow]}>
             <Brand compact />
             <View style={styles.topbarActions}>
               <Pressable style={styles.iconButton} onPress={() => router.push('/history')}>
@@ -92,53 +90,53 @@ export default function Home() {
             </View>
           </View>
 
-          <View style={styles.welcomeRow}>
+          <View style={[styles.welcomeRow, rtlRow]}>
             <View style={{ flex: 1 }}>
-              <Txt style={styles.kicker}>{greeting()}, {firstName}</Txt>
-              <Txt style={styles.headline}>Ready to move?</Txt>
+              <Txt style={styles.kicker}>{greeting}، {firstName}</Txt>
+              <Txt style={styles.headline}>{t('home.ready')}</Txt>
             </View>
             <Pressable style={styles.location} onPress={() => router.push('/edit-profile')}>
               <Ionicons name="location" size={14} color={colors.primary} />
-              <Txt style={styles.locationText}>{profile?.city ?? 'Set location'}</Txt>
+              <Txt style={styles.locationText}>{profile?.city ?? t('home.setLocation')}</Txt>
             </Pressable>
           </View>
 
-          <Pressable style={styles.search} onPress={() => router.push('/(tabs)/discover')}>
+          <Pressable style={[styles.search, rtlRow]} onPress={() => router.push('/(tabs)/discover')}>
             <Ionicons name="search" size={19} color={colors.textMuted} />
-            <Txt style={styles.searchText}>Search by goal, trainer or specialty</Txt>
+            <Txt style={styles.searchText}>{t('home.search')}</Txt>
             <View style={styles.filterButton}><Ionicons name="options" size={17} color={colors.textPrimary} /></View>
           </Pressable>
 
-          <View style={styles.quickRow}>
-            <QuickAction icon="flash" label="Book now" meta="Available today" onPress={() => router.push('/(tabs)/discover')} featured />
-            <QuickAction icon="calendar-outline" label="Sessions" meta="Your schedule" onPress={() => router.push('/history')} />
-            <QuickAction icon="sparkles-outline" label="Momentum" meta="Track progress" onPress={() => router.push('/(tabs)/progress')} />
+          <View style={[styles.quickRow, rtlRow]}>
+            <QuickAction icon="flash" label={t('home.bookNow')} meta={t('home.availableToday')} onPress={() => router.push('/(tabs)/discover')} featured />
+            <QuickAction icon="calendar-outline" label={t('home.sessions')} meta={t('home.yourSchedule')} onPress={() => router.push('/history')} />
+            <QuickAction icon="sparkles-outline" label={t('home.momentum')} meta={t('home.trackProgress')} onPress={() => router.push('/(tabs)/progress')} />
           </View>
 
-          {error && <View style={styles.error}><Ionicons name="cloud-offline-outline" size={18} color={colors.danger} /><Txt variant="caption" style={{ flex: 1 }}>{error}</Txt></View>}
-          {isBackendConfigured && trainers.length === 0 && !loading && <View style={styles.error}><Ionicons name="people-outline" size={18} color={colors.primary} /><Txt variant="caption">No approved trainers are available yet.</Txt></View>}
+          {error && <View style={[styles.error, rtlRow]}><Ionicons name="cloud-offline-outline" size={18} color={colors.danger} /><Txt variant="caption" style={{ flex: 1 }}>{error}</Txt></View>}
+          {isBackendConfigured && trainers.length === 0 && !loading && <View style={[styles.error, rtlRow]}><Ionicons name="people-outline" size={18} color={colors.primary} /><Txt variant="caption">{t('home.noTrainers')}</Txt></View>}
 
           {favorite && (
-            <Pressable style={styles.rebook} onPress={() => open(favorite.id)}>
+            <Pressable style={[styles.rebook, rtlRow]} onPress={() => open(favorite.id)}>
               <LinearGradient colors={[colors.surfaceHigh, colors.surface, '#16100E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
               <View style={styles.rebookCopy}>
-                <Txt style={styles.rebookEyebrow}>REBOOK IN ONE TAP</Txt>
+                <Txt style={styles.rebookEyebrow}>{t('home.rebook')}</Txt>
                 <Txt style={styles.rebookTitle}>{favorite.display_name}</Txt>
                 <Txt style={styles.rebookMeta}>{favorite.headline}</Txt>
               </View>
               <Pressable style={styles.rebookButton} onPress={quickBook}>
-                <Txt style={styles.rebookButtonText}>Book</Txt>
-                <Ionicons name="arrow-forward" size={16} color={colors.white} />
+                <Txt style={styles.rebookButtonText}>{t('home.book')}</Txt>
+                <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={16} color={colors.white} />
               </Pressable>
             </Pressable>
           )}
 
-          <View style={styles.sectionHead}>
+          <View style={[styles.sectionHead, rtlRow]}>
             <View>
-              <Txt style={styles.sectionKicker}>CURATED FOR YOU</Txt>
-              <Txt variant="sectionTitle">Top coaches nearby</Txt>
+              <Txt style={styles.sectionKicker}>{t('home.curated')}</Txt>
+              <Txt variant="sectionTitle">{t('home.topCoaches')}</Txt>
             </View>
-            <Pressable onPress={() => router.push('/(tabs)/discover')}><Txt style={styles.seeAll}>Explore all</Txt></Pressable>
+            <Pressable onPress={() => router.push('/(tabs)/discover')}><Txt style={styles.seeAll}>{t('home.explore')}</Txt></Pressable>
           </View>
 
           {wide ? (
@@ -151,10 +149,10 @@ export default function Home() {
             </ScrollView>
           )}
 
-          <View style={[styles.sectionHead, { marginTop: 30 }]}>
+          <View style={[styles.sectionHead, rtlRow, { marginTop: 30 }]}>
             <View>
-              <Txt style={styles.sectionKicker}>MORE MATCHES</Txt>
-              <Txt variant="sectionTitle">Built around your goals</Txt>
+              <Txt style={styles.sectionKicker}>{t('home.moreMatches')}</Txt>
+              <Txt variant="sectionTitle">{t('home.yourGoals')}</Txt>
             </View>
           </View>
           <View style={[styles.nearGrid, wide && styles.nearGridWide]}>
@@ -183,6 +181,7 @@ function QuickAction({ icon, label, meta, onPress, featured }: { icon: keyof typ
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
   scroll: { paddingBottom: 32 },
   page: { width: '100%', maxWidth: 1160, alignSelf: 'center', paddingHorizontal: 20 },
   topbar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 10 },

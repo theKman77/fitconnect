@@ -1,4 +1,4 @@
-import { ActivityIndicator, Pressable, StyleSheet, View, ViewStyle } from 'react-native';
+import { ActivityIndicator, Pressable, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius } from '@/theme';
@@ -15,7 +15,7 @@ interface Props {
   loading?: boolean;
   icon?: keyof typeof Ionicons.glyphMap;
   fullWidth?: boolean;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 export function Button({

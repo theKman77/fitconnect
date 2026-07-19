@@ -7,6 +7,7 @@ import { formatMoney } from '@/lib/config';
 import { Txt } from './ui/Txt';
 import { Badge } from './ui/Badge';
 import type { Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
 
 interface Props {
   trainer: Trainer;
@@ -29,31 +30,34 @@ function Photo({ uri, height }: { uri?: string | null; height: number }) {
   );
 }
 
-export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride, periodLabel = '/ session' }: Props) {
+export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride, periodLabel }: Props) {
+  const { localeTag, isRTL, t } = useLocale();
   const shownPrice = priceOverride ?? trainer.base_price;
+  const shownPeriod = periodLabel ?? t('trainer.perSession');
+  const rtlRow = isRTL ? styles.rtlRow : undefined;
   const rating = (
-    <View style={styles.ratingRow}>
+    <View style={[styles.ratingRow, rtlRow]}>
       <Ionicons name="star" size={13} color={colors.primary} />
-      <Txt style={styles.rating}>{trainer.rating.toFixed(1)}</Txt>
-      <Txt variant="caption"> ({trainer.review_count})</Txt>
+      <Txt style={styles.rating}>{new Intl.NumberFormat(localeTag, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(trainer.rating)}</Txt>
+      <Txt variant="caption"> ({new Intl.NumberFormat(localeTag).format(trainer.review_count)})</Txt>
     </View>
   );
 
   if (variant === 'row') {
     return (
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && styles.pressed]}>
+      <Pressable onPress={onPress} style={({ pressed }) => [styles.row, rtlRow, pressed && styles.pressed]}>
         <View style={styles.rowThumb}>
           <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={88} />
         </View>
         <View style={styles.rowBody}>
-          <View style={styles.rowTop}>
+          <View style={[styles.rowTop, rtlRow]}>
             <Txt variant="cardTitle" numberOfLines={1} style={{ flex: 1 }}>{trainer.display_name}</Txt>
             {trainer.verified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
           </View>
           <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{trainer.headline}</Txt>
-          <View style={styles.rowMeta}>
+          <View style={[styles.rowMeta, rtlRow]}>
             {rating}
-            <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {periodLabel}</Txt></Txt>
+            <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {shownPeriod}</Txt></Txt>
           </View>
         </View>
       </Pressable>
@@ -66,19 +70,19 @@ export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride,
         <Photo uri={trainer.photos[0] ?? trainer.avatar_url} height={174} />
         <LinearGradient colors={['transparent', 'rgba(8,9,11,0.88)']} style={styles.photoShade} />
         {trainer.available_now && (
-          <Badge label="AVAILABLE" tone="success" style={styles.availBadge} />
+          <Badge label={t('trainer.available')} tone="success" style={[styles.availBadge, isRTL && styles.availBadgeRTL]} />
         )}
-        <View style={styles.photoRating}>{rating}</View>
+        <View style={[styles.photoRating, isRTL && styles.photoRatingRTL]}>{rating}</View>
       </View>
       <View style={styles.wideBody}>
-        <View style={styles.rowTop}>
+        <View style={[styles.rowTop, rtlRow]}>
           <Txt variant="cardTitle" numberOfLines={1} style={{ flex: 1 }}>{trainer.display_name}</Txt>
           {trainer.verified && <Ionicons name="checkmark-circle" size={16} color={colors.primary} />}
         </View>
         <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{trainer.headline}</Txt>
-        <View style={styles.rowMeta}>
-          <Txt style={styles.specialty}>{trainer.specialties[0] ?? 'Personal training'}</Txt>
-          <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {periodLabel}</Txt></Txt>
+        <View style={[styles.rowMeta, rtlRow]}>
+          <Txt style={styles.specialty}>{trainer.specialties[0] ?? t('trainer.personalTraining')}</Txt>
+          <Txt style={styles.price}>{formatMoney(shownPrice)}<Txt variant="caption"> {shownPeriod}</Txt></Txt>
         </View>
       </View>
     </Pressable>
@@ -86,6 +90,7 @@ export function TrainerCard({ trainer, onPress, variant = 'wide', priceOverride,
 }
 
 const styles = StyleSheet.create({
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
   pressed: { opacity: 0.94, transform: [{ scale: 0.988 }] },
   wide: {
     width: 248,
@@ -98,7 +103,9 @@ const styles = StyleSheet.create({
   photoWrap: { position: 'relative' },
   photoShade: { ...StyleSheet.absoluteFillObject, top: '45%' },
   photoRating: { position: 'absolute', left: 13, bottom: 11 },
+  photoRatingRTL: { left: undefined, right: 13 },
   availBadge: { position: 'absolute', top: 12, left: 12 },
+  availBadgeRTL: { left: undefined, right: 12 },
   wideBody: { padding: 15, paddingBottom: 16 },
   chipRow: { flexDirection: 'row', gap: 6, marginTop: 9, flexWrap: 'wrap' },
   miniChip: {

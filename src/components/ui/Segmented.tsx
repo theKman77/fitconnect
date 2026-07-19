@@ -1,6 +1,7 @@
 import { Pressable, StyleSheet, View } from 'react-native';
 import { colors, fonts, radius } from '@/theme';
 import { Txt } from './Txt';
+import { useLocale } from '@/context/locale';
 
 interface Props<T extends string> {
   options: { key: T; label: string }[];
@@ -10,8 +11,9 @@ interface Props<T extends string> {
 
 /** Pill segmented control (e.g. Book instantly / Subscriptions). */
 export function Segmented<T extends string>({ options, value, onChange }: Props<T>) {
+  const { isRTL } = useLocale();
   return (
-    <View style={styles.track}>
+    <View style={[styles.track, isRTL && styles.rtlRow]}>
       {options.map((o) => {
         const active = o.key === value;
         return (
@@ -43,4 +45,5 @@ const styles = StyleSheet.create({
   seg: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: radius.md },
   segActive: { backgroundColor: colors.primary },
   label: { fontFamily: fonts.semibold, fontSize: 14 },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

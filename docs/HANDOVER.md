@@ -87,9 +87,11 @@ date strip).
    (no $99 Apple account yet). Code for maps/push/location exists and is
    verified compiling; Expo Go shows a map placeholder.
 3. **Localization is in progress:** English/Arabic preference, real web RTL,
-   native-safe shared controls, Arabic welcome/navigation, and scheduling are
-   implemented. The remaining marketplace, profile, progress, and session copy
-   still needs page-by-page translation. Light theme remains intentionally absent.
+   native-safe shared controls, welcome/navigation, account creation, onboarding,
+   Home, Discover, Progress, trainer profiles, and the client booking journey are
+   implemented. Trainer operations, account utilities, chat, payment utilities,
+   and post-session screens still need page-by-page translation. Light theme
+   remains intentionally absent.
 4. **Availability is intentionally fixed-slot for the MVP:** trainers publish
    one-hour openings from six daily time options in a paged calendar; clients
    consume the same persisted slots. Recurrence, blackout rules, buffers, custom

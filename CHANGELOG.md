@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-19 — Arabic client journey
+
+### Bilingual marketplace experience
+
+- Localized account creation, Google sign-in, password recovery, and the full three-step onboarding quiz with mirrored RTL controls and Arabic validation.
+- Localized Home, Discover, Progress, trainer cards, trainer profiles, availability, and the complete four-step client booking and review flow.
+- Added Arabic presentation for demo trainer biographies, specialties, plans, equipment, dates, times, counts, and validation while preserving stable English database values.
+- Prevented logged-out Progress previews from sending demo identifiers to live UUID-backed Supabase tables.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized browser flow passes English and Arabic welcome, scheduling, Progress, Discover, sign-up, and onboarding states with no serious browser errors.
+
 ## 2026-07-19 — Arabic/RTL foundation
 
 ### Saudi-market localization

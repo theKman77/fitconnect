@@ -7,12 +7,39 @@ import { colors, fonts, radius } from '@/theme';
 import { Button, Card, Chip, Txt } from '@/components/ui';
 import { useAuth } from '@/context/auth';
 import { goalOptions, experienceLevels, injuryOptions } from '@/data/seed';
+import { useLocale } from '@/context/locale';
 
 const STEPS = 3;
+
+const ARABIC_GOALS: Record<string, string> = {
+  'Build muscle': 'بناء العضلات',
+  'Lose weight': 'خسارة الوزن',
+  'Improve mobility': 'تحسين الحركة',
+  'Boost endurance': 'رفع التحمّل',
+  'Sport-specific': 'رياضة محددة',
+  'General fitness': 'اللياقة العامة',
+};
+
+const ARABIC_LEVELS: Record<string, { label: string; sub: string }> = {
+  beginner: { label: 'مبتدئ', sub: 'جديد في التدريب أو عائد إليه' },
+  intermediate: { label: 'متوسط', sub: 'متمكن من الأساسيات' },
+  advanced: { label: 'متقدم', sub: 'تتدرب باستمرار منذ سنوات' },
+};
+
+const ARABIC_INJURIES: Record<string, string> = {
+  None: 'لا يوجد',
+  'Lower back': 'أسفل الظهر',
+  Knee: 'الركبة',
+  Shoulder: 'الكتف',
+  Wrist: 'المعصم',
+  Neck: 'الرقبة',
+  Ankle: 'الكاحل',
+};
 
 export default function Onboarding() {
   const router = useRouter();
   const { updateProfile, session, isDemo } = useAuth();
+  const { locale, isRTL, t } = useLocale();
   const [step, setStep] = useState(0);
   const [goals, setGoals] = useState<string[]>([]);
   const [level, setLevel] = useState<string | null>(null);
@@ -46,7 +73,7 @@ export default function Onboarding() {
       });
       router.replace('/(tabs)');
     } catch (e: any) {
-      setError(e?.message ?? 'Could not save your answers. Please try again.');
+      setError(e?.message ?? t('onboarding.saveError'));
     } finally {
       setSaving(false);
     }
@@ -56,10 +83,10 @@ export default function Onboarding() {
     <SafeAreaView style={styles.root}>
       {/* Progress */}
       <View style={styles.top}>
-        <View style={styles.progressRow}>
+        <View style={[styles.progressRow, isRTL && styles.rtlRow]}>
           {step > 0 ? (
             <Pressable onPress={() => setStep(step - 1)} hitSlop={10}>
-              <Ionicons name="chevron-back" size={22} color={colors.textPrimary} />
+              <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={22} color={colors.textPrimary} />
             </Pressable>
           ) : (
             <View style={{ width: 22 }} />
@@ -73,11 +100,11 @@ export default function Onboarding() {
       <ScrollView style={styles.body} showsVerticalScrollIndicator={false}>
         {step === 0 && (
           <>
-            <Txt variant="screenTitle">What are your fitness goals?</Txt>
-            <Txt variant="body" style={styles.sub}>Pick all that apply. This shapes who we recommend.</Txt>
-            <View style={styles.chips}>
+            <Txt variant="screenTitle">{t('onboarding.goalsTitle')}</Txt>
+            <Txt variant="body" style={styles.sub}>{t('onboarding.goalsCopy')}</Txt>
+            <View style={[styles.chips, isRTL && styles.rtlWrap]}>
               {goalOptions.map((g) => (
-                <Chip key={g} label={g} selected={goals.includes(g)} onPress={() => toggle(goals, setGoals, g)} />
+                <Chip key={g} label={locale === 'ar' ? ARABIC_GOALS[g] ?? g : g} selected={goals.includes(g)} onPress={() => toggle(goals, setGoals, g)} />
               ))}
             </View>
           </>
@@ -85,13 +112,13 @@ export default function Onboarding() {
 
         {step === 1 && (
           <>
-            <Txt variant="screenTitle">What is your experience level?</Txt>
-            <Txt variant="body" style={styles.sub}>So trainers meet you where you are.</Txt>
+            <Txt variant="screenTitle">{t('onboarding.experienceTitle')}</Txt>
+            <Txt variant="body" style={styles.sub}>{t('onboarding.experienceCopy')}</Txt>
             <View style={{ gap: 12, marginTop: 22 }}>
               {experienceLevels.map((l) => (
                 <Card key={l.key} onPress={() => setLevel(l.key)} selected={level === l.key}>
-                  <Txt variant="bodyStrong">{l.label}</Txt>
-                  <Txt variant="caption" style={{ marginTop: 3 }}>{l.sub}</Txt>
+                  <Txt variant="bodyStrong">{locale === 'ar' ? ARABIC_LEVELS[l.key]?.label ?? l.label : l.label}</Txt>
+                  <Txt variant="caption" style={{ marginTop: 3 }}>{locale === 'ar' ? ARABIC_LEVELS[l.key]?.sub ?? l.sub : l.sub}</Txt>
                 </Card>
               ))}
             </View>
@@ -100,17 +127,17 @@ export default function Onboarding() {
 
         {step === 2 && (
           <>
-            <Txt variant="screenTitle">Any injuries or limitations?</Txt>
-            <Txt variant="body" style={styles.sub}>Trainers prep in advance so sessions stay safe.</Txt>
-            <View style={styles.chips}>
+            <Txt variant="screenTitle">{t('onboarding.injuriesTitle')}</Txt>
+            <Txt variant="body" style={styles.sub}>{t('onboarding.injuriesCopy')}</Txt>
+            <View style={[styles.chips, isRTL && styles.rtlWrap]}>
               {injuryOptions.map((i) => (
-                <Chip key={i} label={i} selected={injuries.includes(i)} onPress={() => toggle(injuries, setInjuries, i)} />
+                <Chip key={i} label={locale === 'ar' ? ARABIC_INJURIES[i] ?? i : i} selected={injuries.includes(i)} onPress={() => toggle(injuries, setInjuries, i)} />
               ))}
             </View>
-            <View style={styles.note}>
+            <View style={[styles.note, isRTL && styles.rtlRow]}>
               <Ionicons name="lock-closed" size={16} color={colors.primary} />
               <Txt variant="caption" style={{ flex: 1, color: colors.textMuted }}>
-                Stored privately for future matching. This MVP does not expose health notes to trainers yet.
+                {t('onboarding.privateNote')}
               </Txt>
             </View>
           </>
@@ -120,7 +147,7 @@ export default function Onboarding() {
       <View style={styles.footer}>
         {error && <Txt variant="caption" color={colors.danger} center style={{ marginBottom: 10 }}>{error}</Txt>}
         <Button
-          title={step < STEPS - 1 ? 'Continue' : 'Find my trainer'}
+          title={step < STEPS - 1 ? t('onboarding.continue') : t('onboarding.findTrainer')}
           onPress={next}
           disabled={!canContinue}
           loading={saving}
@@ -151,4 +178,6 @@ const styles = StyleSheet.create({
     marginTop: 24,
   },
   footer: { padding: 22, paddingTop: 12 },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
+  rtlWrap: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

@@ -1,4 +1,4 @@
-import { StyleSheet, View, ViewStyle } from 'react-native';
+import { StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, radius } from '@/theme';
 import { Txt } from './Txt';
@@ -9,7 +9,7 @@ interface Props {
   label: string;
   tone?: Tone;
   icon?: keyof typeof Ionicons.glyphMap;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
 }
 
 const TONES: Record<Tone, { bg: string; fg: string; border: string }> = {

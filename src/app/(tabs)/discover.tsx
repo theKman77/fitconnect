@@ -8,19 +8,24 @@ import { listTrainers, TrainerFilter } from '@/lib/api';
 import { Chip, EmptyState, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
 import type { Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
 
 const RATINGS = [4.5, 4.7, 4.9];
-const GENDERS = ['Female', 'Male'];
-const LANGUAGES = ['Arabic', 'English', 'Urdu', 'Hindi'];
+const GENDERS = [{ value: 'Female', labelKey: 'discover.female' }, { value: 'Male', labelKey: 'discover.male' }] as const;
+const LANGUAGES = [
+  { value: 'Arabic', labelKey: 'discover.arabic' }, { value: 'English', labelKey: 'discover.english' },
+  { value: 'Urdu', labelKey: 'discover.urdu' }, { value: 'Hindi', labelKey: 'discover.hindi' },
+] as const;
 const GOALS = [
-  { label: 'Get stronger', terms: ['strength', 'muscle'], icon: 'barbell-outline' },
-  { label: 'Move better', terms: ['mobility', 'yoga', 'pilates'], icon: 'body-outline' },
-  { label: 'Lose weight', terms: ['weight', 'hiit', 'cardio'], icon: 'flame-outline' },
-  { label: 'Learn boxing', terms: ['boxing', 'combat'], icon: 'flash-outline' },
+  { key: 'stronger', labelKey: 'discover.stronger', terms: ['strength', 'muscle'], icon: 'barbell-outline' },
+  { key: 'move', labelKey: 'discover.moveBetter', terms: ['mobility', 'yoga', 'pilates'], icon: 'body-outline' },
+  { key: 'weight', labelKey: 'discover.loseWeight', terms: ['weight', 'hiit', 'cardio'], icon: 'flame-outline' },
+  { key: 'boxing', labelKey: 'discover.boxing', terms: ['boxing', 'combat'], icon: 'flash-outline' },
 ] as const;
 
 export default function Discover() {
   const router = useRouter();
+  const { localeTag, isRTL, t } = useLocale();
   const [all, setAll] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -37,7 +42,7 @@ export default function Discover() {
     setError(null);
     listTrainers()
       .then(setAll)
-      .catch(() => setError('Could not load trainers. Check your connection.'))
+      .catch(() => setError(t('discover.loadError')))
       .finally(() => setLoading(false));
   };
 
@@ -45,7 +50,7 @@ export default function Discover() {
 
   const results = useMemo(() => {
     const filter: TrainerFilter = { query, availableNow, minRating, gender, language };
-    const selectedGoal = GOALS.find((item) => item.label === goal);
+    const selectedGoal = GOALS.find((item) => item.key === goal);
     return all.filter((t) => {
       const hay = `${t.display_name} ${t.headline ?? ''} ${t.specialties.join(' ')}`.toLowerCase();
       if (filter.query && !hay.includes(filter.query.toLowerCase())) return false;
@@ -61,6 +66,7 @@ export default function Discover() {
   const toggle = <T,>(cur: T | undefined, val: T, set: (v: T | undefined) => void) =>
     set(cur === val ? undefined : val);
   const activeFilters = Number(availableNow) + Number(!!minRating) + Number(!!gender) + Number(!!language);
+  const rtlRow = isRTL ? styles.rtlRow : undefined;
   const clearAll = () => {
     setQuery(''); setGoal(undefined); setAvailableNow(false);
     setMinRating(undefined); setGender(undefined); setLanguage(undefined);
@@ -69,46 +75,46 @@ export default function Discover() {
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.headerRow}>
+        <View style={[styles.headerRow, rtlRow]}>
           <View style={{ flex: 1 }}>
-            <Txt variant="monoTag">TRAIN ON YOUR TERMS</Txt>
-            <Txt style={styles.title}>Find your person.</Txt>
+            <Txt variant="monoTag">{t('discover.kicker')}</Txt>
+            <Txt style={styles.title}>{t('discover.title')}</Txt>
           </View>
           <View style={styles.cityPill}>
             <Ionicons name="location" size={13} color={colors.primary} />
-            <Txt style={styles.cityText}>Riyadh</Txt>
+            <Txt style={styles.cityText}>{t('discover.riyadh')}</Txt>
           </View>
         </View>
-        <Txt variant="body" style={styles.intro}>Choose a goal, then compare real coaches by fit—not just price.</Txt>
+        <Txt variant="body" style={styles.intro}>{t('discover.intro')}</Txt>
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.goalRail} contentContainerStyle={styles.goalContent}>
           {GOALS.map((item) => {
-            const selected = item.label === goal;
+            const selected = item.key === goal;
             return (
               <Pressable
-                key={item.label}
-                onPress={() => setGoal(selected ? undefined : item.label)}
+                key={item.key}
+                onPress={() => setGoal(selected ? undefined : item.key)}
                 style={({ pressed }) => [styles.goalCard, selected && styles.goalCardOn, pressed && styles.pressed]}
               >
                 <View style={[styles.goalIcon, selected && styles.goalIconOn]}>
                   <Ionicons name={item.icon} size={20} color={selected ? colors.white : colors.primary} />
                 </View>
-                <Txt style={[styles.goalText, selected && { color: colors.textPrimary }]}>{item.label}</Txt>
-                <Ionicons name="arrow-forward" size={14} color={selected ? colors.primary : colors.textFaint} />
+                <Txt style={[styles.goalText, selected && { color: colors.textPrimary }]}>{t(item.labelKey)}</Txt>
+                <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={selected ? colors.primary : colors.textFaint} />
               </Pressable>
             );
           })}
         </ScrollView>
 
-        <View style={styles.toolRow}>
-          <View style={styles.search}>
+        <View style={[styles.toolRow, rtlRow]}>
+          <View style={[styles.search, rtlRow]}>
             <Ionicons name="search" size={18} color={colors.textDim} />
             <TextInput
               value={query}
               onChangeText={setQuery}
-              placeholder="Trainer, specialty, or skill"
+              placeholder={t('discover.search')}
               placeholderTextColor={colors.textDim}
-              style={styles.input}
+              style={[styles.input, isRTL && styles.inputRTL]}
               autoCapitalize="none"
               returnKeyType="search"
             />
@@ -128,38 +134,38 @@ export default function Discover() {
           </Pressable>
         </View>
 
-        <View style={styles.quickRow}>
+        <View style={[styles.quickRow, rtlRow]}>
           <Pressable onPress={() => setAvailableNow((value) => !value)} style={[styles.nowPill, availableNow && styles.nowPillOn]}>
             <View style={[styles.liveDot, availableNow && { backgroundColor: colors.white }]} />
-            <Txt style={[styles.nowText, availableNow && { color: colors.white }]}>Available now</Txt>
+            <Txt style={[styles.nowText, availableNow && { color: colors.white }]}>{t('discover.availableNow')}</Txt>
           </Pressable>
-          {(goal || activeFilters > 0 || query) && <Pressable onPress={clearAll}><Txt style={styles.clearText}>Clear all</Txt></Pressable>}
+          {(goal || activeFilters > 0 || query) && <Pressable onPress={clearAll}><Txt style={styles.clearText}>{t('discover.clear')}</Txt></Pressable>}
         </View>
 
         {showFilters && (
           <View style={styles.filterPanel}>
-            <View style={styles.filterPanelTop}>
-              <Txt variant="sectionTitle">Refine the match</Txt>
+            <View style={[styles.filterPanelTop, rtlRow]}>
+              <Txt variant="sectionTitle">{t('discover.refine')}</Txt>
               <Pressable onPress={() => setShowFilters(false)} hitSlop={8}><Ionicons name="close" size={20} color={colors.textMuted} /></Pressable>
             </View>
-            <FilterGroup title="Minimum rating">
+            <FilterGroup title={t('discover.rating')}>
               {RATINGS.map((r) => <Chip key={r} label={`${r}+`} selected={minRating === r} onPress={() => toggle(minRating, r, setMinRating)} />)}
             </FilterGroup>
-            <FilterGroup title="Trainer gender">
-              {GENDERS.map((g) => <Chip key={g} label={g} selected={gender === g} onPress={() => toggle(gender, g, setGender)} />)}
+            <FilterGroup title={t('discover.gender')}>
+              {GENDERS.map((g) => <Chip key={g.value} label={t(g.labelKey)} selected={gender === g.value} onPress={() => toggle(gender, g.value, setGender)} />)}
             </FilterGroup>
-            <FilterGroup title="Session language">
-              {LANGUAGES.map((l) => <Chip key={l} label={l} selected={language === l} onPress={() => toggle(language, l, setLanguage)} />)}
+            <FilterGroup title={t('discover.language')}>
+              {LANGUAGES.map((l) => <Chip key={l.value} label={t(l.labelKey)} selected={language === l.value} onPress={() => toggle(language, l.value, setLanguage)} />)}
             </FilterGroup>
           </View>
         )}
 
-        <View style={styles.resultsHead}>
+        <View style={[styles.resultsHead, rtlRow]}>
           <View>
-            <Txt variant="sectionTitle">Recommended matches</Txt>
-            <Txt variant="caption" style={{ marginTop: 3 }}>{results.length} trainer{results.length === 1 ? '' : 's'} ready to help</Txt>
+            <Txt variant="sectionTitle">{t('discover.matches')}</Txt>
+            <Txt variant="caption" style={{ marginTop: 3 }}>{new Intl.NumberFormat(localeTag).format(results.length)} {results.length === 1 ? t('discover.readySingular') : t('discover.readyPlural')}</Txt>
           </View>
-          <View style={styles.qualityPill}><Ionicons name="shield-checkmark" size={13} color={colors.success} /><Txt style={styles.qualityText}>VETTED</Txt></View>
+          <View style={styles.qualityPill}><Ionicons name="shield-checkmark" size={13} color={colors.success} /><Txt style={styles.qualityText}>{t('discover.vetted')}</Txt></View>
         </View>
 
         <View style={styles.results}>
@@ -168,9 +174,9 @@ export default function Discover() {
           {!loading && results.length === 0 && (
             <EmptyState
               icon={error ? 'cloud-offline-outline' : 'search'}
-              title={error ? 'Trainers unavailable' : 'No exact match yet'}
-              subtitle={error ?? 'Widen your filters and we will show the closest available coaches.'}
-              actionLabel={error ? 'Try again' : 'Reset search'}
+              title={error ? t('discover.unavailable') : t('discover.noMatch')}
+              subtitle={error ?? t('discover.noMatchCopy')}
+              actionLabel={error ? t('common.tryAgain') : t('discover.reset')}
               onAction={error ? load : clearAll}
             />
           )}
@@ -186,6 +192,7 @@ function FilterGroup({ title, children }: { title: string; children: React.React
 
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
   content: { paddingBottom: 34 },
   headerRow: { flexDirection: 'row', alignItems: 'flex-start', paddingHorizontal: 22, paddingTop: 14, gap: 12 },
   title: { fontFamily: fonts.extrabold, fontSize: 34, lineHeight: 38, letterSpacing: -1.5, color: colors.textPrimary, marginTop: 7 },
@@ -203,6 +210,7 @@ const styles = StyleSheet.create({
   toolRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 22, marginTop: 24 },
   search: { flex: 1, minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, borderRadius: radius.lg, paddingHorizontal: 15 },
   input: { flex: 1, color: colors.textPrimary, fontFamily: fonts.regular, fontSize: 14, paddingVertical: 13 },
+  inputRTL: { fontFamily: undefined, textAlign: 'right', writingDirection: 'rtl' },
   filterButton: { width: 50, height: 50, borderRadius: radius.lg, backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border, alignItems: 'center', justifyContent: 'center' },
   filterButtonOn: { backgroundColor: colors.primary, borderColor: colors.primary },
   filterCount: { position: 'absolute', right: -4, top: -5, minWidth: 18, height: 18, borderRadius: 9, backgroundColor: colors.textPrimary, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 4 },

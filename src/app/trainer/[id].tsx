@@ -6,6 +6,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ar';
 import { colors, fonts, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { getTrainer } from '@/lib/api';
@@ -15,6 +16,8 @@ import { useAuth } from '@/context/auth';
 import { useBooking } from '@/context/booking';
 import { Badge, Button, Card, EmptyState, TrainerProfileSkeleton, Txt } from '@/components/ui';
 import { VideoPlayerModal } from '@/components/VideoPlayerModal';
+import { useLocale } from '@/context/locale';
+import { localizeDomain } from '@/lib/localize-domain';
 import type { AvailabilitySlot, SessionType, TrainerDetail } from '@/types/domain';
 
 type Tab = 'plans' | 'times' | 'reviews';
@@ -24,6 +27,7 @@ export default function TrainerProfile() {
   const router = useRouter();
   const { start, update } = useBooking();
   const { profile } = useAuth();
+  const { locale, localeTag, isRTL, t } = useLocale();
   const [trainer, setTrainer] = useState<TrainerDetail>();
   const [selected, setSelected] = useState<SessionType>();
   const [fav, setFav] = useState(false);
@@ -37,15 +41,15 @@ export default function TrainerProfile() {
     setLoadError(null);
     getTrainer(id)
       .then(async (value) => {
-        if (!value) throw new Error('Trainer not found');
+        if (!value) throw new Error(t('profile.notFound'));
         setTrainer(value);
         const bookable = value.session_types.filter((session) => session.active && session.kind !== 'subscription');
         setSelected(bookable.find((session) => session.popular) ?? bookable[0]);
         setAvailability(await listAvailability(value).catch(() => []));
       })
-      .catch(() => setLoadError('This trainer profile could not be loaded.'));
+      .catch(() => setLoadError(t('profile.loadError')));
     isFavorite(profile?.id ?? 'demo-client', id).then(setFav).catch(() => {});
-  }, [id, profile?.id]);
+  }, [id, profile?.id, t]);
 
   async function onToggleFavorite() {
     if (!id) return;
@@ -70,7 +74,7 @@ export default function TrainerProfile() {
     return (
       <SafeAreaView style={styles.root}>
         {loadError
-          ? <View style={styles.center}><EmptyState icon="alert-circle" title="Profile unavailable" subtitle={loadError} actionLabel="Go back" onAction={() => router.back()} /></View>
+          ? <View style={styles.center}><EmptyState icon="alert-circle" title={t('profile.unavailable')} subtitle={loadError} actionLabel={t('profile.goBack')} onAction={() => router.back()} /></View>
           : <TrainerProfileSkeleton />}
       </SafeAreaView>
     );
@@ -88,34 +92,34 @@ export default function TrainerProfile() {
             : <LinearGradient colors={[colors.surfaceHigh, colors.surface]} style={StyleSheet.absoluteFill} />}
           <LinearGradient colors={['rgba(8,9,11,0.08)', 'rgba(8,9,11,0.18)', colors.bg]} locations={[0, 0.46, 1]} style={StyleSheet.absoluteFill} />
 
-          <View style={styles.heroTop}>
-            <IconButton icon="chevron-back" label="Go back" onPress={() => router.back()} />
-            <IconButton icon={fav ? 'heart' : 'heart-outline'} label={fav ? 'Remove from favorites' : 'Add to favorites'} tint={fav ? colors.primary : colors.white} onPress={onToggleFavorite} />
+          <View style={[styles.heroTop, isRTL && styles.rtlRow]}>
+            <IconButton icon={isRTL ? 'chevron-forward' : 'chevron-back'} label={t('profile.goBack')} onPress={() => router.back()} />
+            <IconButton icon={fav ? 'heart' : 'heart-outline'} label={fav ? t('profile.removeFavorite') : t('profile.addFavorite')} tint={fav ? colors.primary : colors.white} onPress={onToggleFavorite} />
           </View>
 
           <View style={styles.heroIdentity}>
-            <View style={styles.badgeRow}>
-              {trainer.verified && <Badge label="FITCONNECT VERIFIED" tone="brand" icon="checkmark-circle" />}
-              {trainer.available_now && <Badge label="AVAILABLE TODAY" tone="success" />}
+            <View style={[styles.badgeRow, isRTL && styles.rtlWrap]}>
+              {trainer.verified && <Badge label={t('profile.verified')} tone="brand" icon="checkmark-circle" />}
+              {trainer.available_now && <Badge label={t('profile.availableToday')} tone="success" />}
             </View>
             <Txt style={styles.name}>{trainer.display_name}</Txt>
-            <Txt style={styles.headline}>{trainer.headline}</Txt>
+            <Txt style={styles.headline}>{localizeDomain(trainer.headline, locale)}</Txt>
           </View>
         </View>
 
-        <View style={styles.proofStrip}>
-          <Metric value={trainer.rating.toFixed(1)} label={`${trainer.review_count} reviews`} icon="star" />
+        <View style={[styles.proofStrip, isRTL && styles.rtlRow]}>
+          <Metric value={new Intl.NumberFormat(localeTag, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(trainer.rating)} label={`${new Intl.NumberFormat(localeTag).format(trainer.review_count)} ${t('profile.reviews')}`} icon="star" />
           <View style={styles.metricDivider} />
-          <Metric value={`${trainer.years_experience}`} label="years coaching" icon="ribbon-outline" />
+          <Metric value={new Intl.NumberFormat(localeTag).format(trainer.years_experience)} label={t('profile.yearsCoaching')} icon="ribbon-outline" />
           <View style={styles.metricDivider} />
-          <Metric value={trainer.city ?? 'Riyadh'} label="local coach" icon="location-outline" compact />
+          <Metric value={locale === 'ar' && (trainer.city ?? 'Riyadh') === 'Riyadh' ? 'الرياض' : trainer.city ?? 'Riyadh'} label={t('profile.localCoach')} icon="location-outline" compact />
         </View>
 
         <View style={styles.section}>
-          <View style={styles.sectionHead}>
+          <View style={[styles.sectionHead, isRTL && styles.rtlRow]}>
             <View style={{ flex: 1 }}>
-              <Txt variant="monoTag">THE COACH, NOT THE SALES PITCH</Txt>
-              <Txt style={styles.sectionTitle}>Why train with {firstName}?</Txt>
+              <Txt variant="monoTag">{t('profile.kicker')}</Txt>
+              <Txt style={styles.sectionTitle}>{t('profile.whyTrain')} {firstName}{isRTL ? '؟' : '?'}</Txt>
             </View>
             {trainer.video_intro_url && (
               <Pressable onPress={() => setShowVideo(true)} style={styles.playButton}>
@@ -123,12 +127,12 @@ export default function TrainerProfile() {
               </Pressable>
             )}
           </View>
-          {trainer.bio && <Txt variant="body" style={styles.bio}>{trainer.bio}</Txt>}
-          <View style={styles.specialties}>
-            {trainer.specialties.map((specialty) => <View key={specialty} style={styles.spec}><Txt style={styles.specText}>{specialty}</Txt></View>)}
+          {trainer.bio && <Txt variant="body" style={styles.bio}>{localizeDomain(trainer.bio, locale)}</Txt>}
+          <View style={[styles.specialties, isRTL && styles.rtlWrap]}>
+            {trainer.specialties.map((specialty) => <View key={specialty} style={styles.spec}><Txt style={styles.specText}>{localizeDomain(specialty, locale)}</Txt></View>)}
           </View>
           {trainer.socials && Object.keys(trainer.socials).length > 0 && (
-            <View style={styles.socials}>
+            <View style={[styles.socials, isRTL && styles.rtlWrap]}>
               {trainer.socials.instagram && <SocialButton icon="logo-instagram" handle={trainer.socials.instagram} base="https://instagram.com/" />}
               {trainer.socials.tiktok && <SocialButton icon="logo-tiktok" handle={trainer.socials.tiktok} base="https://tiktok.com/@" />}
               {trainer.socials.x && <SocialButton icon="logo-twitter" handle={trainer.socials.x} base="https://x.com/" />}
@@ -137,16 +141,16 @@ export default function TrainerProfile() {
           )}
         </View>
 
-        <View style={styles.promiseCard}>
+        <View style={[styles.promiseCard, isRTL && styles.rtlRow]}>
           <View style={styles.promiseIcon}><Ionicons name="shield-checkmark" size={22} color={colors.success} /></View>
           <View style={{ flex: 1 }}>
-            <Txt variant="bodyStrong">Your session stays protected</Txt>
-            <Txt variant="caption" style={{ marginTop: 4 }}>Verified identity, a saved booking record, support, and progress history in one place.</Txt>
+            <Txt variant="bodyStrong">{t('profile.protected')}</Txt>
+            <Txt variant="caption" style={{ marginTop: 4 }}>{t('profile.protectedCopy')}</Txt>
           </View>
         </View>
 
-        <View style={styles.tabs}>
-          {([{ key: 'plans', label: 'Plans' }, { key: 'times', label: 'Open times' }, { key: 'reviews', label: 'Reviews' }] as const).map((item) => (
+        <View style={[styles.tabs, isRTL && styles.rtlRow]}>
+          {([{ key: 'plans', label: t('profile.plans') }, { key: 'times', label: t('profile.openTimes') }, { key: 'reviews', label: t('profile.reviews') }] as const).map((item) => (
             <Pressable key={item.key} onPress={() => setTab(item.key)} style={[styles.tab, tab === item.key && styles.tabOn]}>
               <Txt style={[styles.tabText, tab === item.key && styles.tabTextOn]}>{item.label}</Txt>
             </Pressable>
@@ -161,19 +165,19 @@ export default function TrainerProfile() {
               <Pressable
                 key={session.id}
                 onPress={disabled ? undefined : () => setSelected(session)}
-                style={[styles.plan, isSelected && styles.planOn, disabled && styles.disabled]}
+                style={[styles.plan, isRTL && styles.rtlRow, isSelected && styles.planOn, disabled && styles.disabled]}
               >
                 <View style={[styles.radio, isSelected && styles.radioOn]}>{isSelected && <View style={styles.radioDot} />}</View>
                 <View style={{ flex: 1 }}>
-                  <View style={styles.planNameRow}>
-                    <Txt variant="bodyStrong">{session.name}</Txt>
-                    {disabled ? <Badge label="SOON" tone="neutral" /> : session.popular && <Badge label="BEST FIT" tone="brand" />}
+                  <View style={[styles.planNameRow, isRTL && styles.rtlWrap]}>
+                    <Txt variant="bodyStrong">{localizeDomain(session.name, locale)}</Txt>
+                    {disabled ? <Badge label={t('profile.soon')} tone="neutral" /> : session.popular && <Badge label={t('profile.bestFit')} tone="brand" />}
                   </View>
-                  <Txt variant="caption" style={{ marginTop: 4 }}>{session.description}</Txt>
+                  <Txt variant="caption" style={{ marginTop: 4 }}>{localizeDomain(session.description, locale)}</Txt>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
+                <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end' }}>
                   <Txt style={styles.planPrice}>{formatMoney(session.price)}</Txt>
-                  <Txt variant="caption">{session.billing_period === 'mo' ? 'monthly' : 'total'}</Txt>
+                  <Txt variant="caption">{session.billing_period === 'mo' ? t('profile.monthly') : t('profile.total')}</Txt>
                 </View>
               </Pressable>
             );
@@ -182,18 +186,18 @@ export default function TrainerProfile() {
           {tab === 'times' && (
             <View style={styles.slotList}>
               {availability.length === 0
-                ? <Card><EmptyState icon="calendar-outline" title="No openings published" subtitle="Send this trainer a favorite and check again soon." /></Card>
+                ? <Card><EmptyState icon="calendar-outline" title={t('profile.noOpenings')} subtitle={t('profile.noOpeningsCopy')} /></Card>
                 : availability.slice(0, 12).map((slot) => (
-                  <Pressable key={slot.id} disabled={slot.booked} onPress={() => bookOn(new Date(slot.starts_at))} style={[styles.opening, slot.booked && styles.disabled]}>
+                  <Pressable key={slot.id} disabled={slot.booked} onPress={() => bookOn(new Date(slot.starts_at))} style={[styles.opening, isRTL && styles.rtlRow, slot.booked && styles.disabled]}>
                     <View style={styles.dateTile}>
-                      <Txt style={styles.dateDay}>{dayjs(slot.starts_at).format('DD')}</Txt>
-                      <Txt style={styles.dateMonth}>{dayjs(slot.starts_at).format('MMM').toUpperCase()}</Txt>
+                      <Txt style={styles.dateDay}>{dayjs(slot.starts_at).locale(locale).format('DD')}</Txt>
+                      <Txt style={styles.dateMonth}>{dayjs(slot.starts_at).locale(locale).format('MMM').toUpperCase()}</Txt>
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Txt variant="bodyStrong">{dayjs(slot.starts_at).format('dddd')}</Txt>
-                      <Txt variant="caption" style={{ marginTop: 3 }}>{dayjs(slot.starts_at).format('h:mm A')} · {dayjs(slot.ends_at).diff(dayjs(slot.starts_at), 'minute')} minutes</Txt>
+                      <Txt variant="bodyStrong">{dayjs(slot.starts_at).locale(locale).format('dddd')}</Txt>
+                      <Txt variant="caption" style={{ marginTop: 3 }}>{new Intl.DateTimeFormat(localeTag, { hour: 'numeric', minute: '2-digit' }).format(new Date(slot.starts_at))} · {new Intl.NumberFormat(localeTag).format(dayjs(slot.ends_at).diff(dayjs(slot.starts_at), 'minute'))} {t('profile.minutes')}</Txt>
                     </View>
-                    {slot.booked ? <Badge label="BOOKED" tone="neutral" /> : <Ionicons name="arrow-forward" size={18} color={colors.primary} />}
+                    {slot.booked ? <Badge label={t('profile.booked')} tone="neutral" /> : <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={18} color={colors.primary} />}
                   </Pressable>
                 ))}
             </View>
@@ -201,12 +205,12 @@ export default function TrainerProfile() {
 
           {tab === 'reviews' && (
             trainer.reviews.length === 0
-              ? <Card><EmptyState icon="chatbubble-ellipses-outline" title="No reviews yet" subtitle="Completed clients will be able to leave verified feedback here." /></Card>
+              ? <Card><EmptyState icon="chatbubble-ellipses-outline" title={t('profile.noReviews')} subtitle={t('profile.noReviewsCopy')} /></Card>
               : trainer.reviews.map((review) => (
                 <Card key={review.id} style={{ marginBottom: 12 }}>
-                  <View style={styles.reviewTop}>
+                  <View style={[styles.reviewTop, isRTL && styles.rtlRow]}>
                     <View style={styles.reviewStars}>{Array.from({ length: 5 }).map((_, index) => <Ionicons key={index} name="star" size={13} color={index < review.rating ? colors.primary : colors.surfaceHigh} />)}</View>
-                    <Badge label="VERIFIED SESSION" tone="neutral" icon="checkmark-circle" />
+                    <Badge label={t('profile.verifiedSession')} tone="neutral" icon="checkmark-circle" />
                   </View>
                   {review.comment && <Txt variant="body" style={{ marginTop: 12 }}>“{review.comment}”</Txt>}
                 </Card>
@@ -217,12 +221,12 @@ export default function TrainerProfile() {
 
       {trainer.video_intro_url && <VideoPlayerModal visible={showVideo} uri={trainer.video_intro_url} onClose={() => setShowVideo(false)} />}
 
-      <View style={styles.cta}>
+      <View style={[styles.cta, isRTL && styles.rtlRow]}>
         <View>
-          <Txt variant="caption">{selected?.kind === 'pack' ? 'SELECTED PACK' : 'PER SESSION'}</Txt>
+          <Txt variant="caption">{selected?.kind === 'pack' ? t('profile.selectedPack') : t('profile.perSession')}</Txt>
           <Txt style={styles.ctaPrice}>{formatMoney(selected?.price ?? trainer.base_price)}</Txt>
         </View>
-        <Button title={selected ? `Train with ${firstName}` : 'Select a plan'} onPress={() => bookOn()} disabled={!selected} fullWidth={false} style={styles.ctaButton} />
+        <Button title={selected ? `${t('profile.trainWith')} ${firstName}` : t('profile.selectPlan')} onPress={() => bookOn()} disabled={!selected} fullWidth={false} style={[styles.ctaButton, isRTL && { marginLeft: 0, marginRight: 16 }]} />
       </View>
     </SafeAreaView>
   );
@@ -305,4 +309,6 @@ const styles = StyleSheet.create({
   cta: { position: 'absolute', left: 0, right: 0, bottom: 0, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 22, paddingTop: 14, paddingBottom: 28, backgroundColor: 'rgba(17,19,24,0.98)', borderTopWidth: 1, borderTopColor: colors.border },
   ctaPrice: { fontFamily: fonts.extrabold, fontSize: 22, color: colors.textPrimary },
   ctaButton: { flex: 1, marginLeft: 16 },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
+  rtlWrap: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

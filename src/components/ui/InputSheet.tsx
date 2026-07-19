@@ -3,6 +3,7 @@ import { KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, TextInput
 import { colors, fonts, radius } from '@/theme';
 import { Txt } from './Txt';
 import { Button } from './Button';
+import { useLocale } from '@/context/locale';
 
 interface Field {
   key: string;
@@ -22,7 +23,8 @@ interface Props {
 }
 
 /** Bottom-sheet style dialog for quick data entry (log weight, add PR…). */
-export function InputSheet({ visible, title, fields, submitLabel = 'Save', onSubmit, onClose }: Props) {
+export function InputSheet({ visible, title, fields, submitLabel, onSubmit, onClose }: Props) {
+  const { isRTL, t } = useLocale();
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -38,7 +40,7 @@ export function InputSheet({ visible, title, fields, submitLabel = 'Save', onSub
       setValues({});
       onClose();
     } catch (e: any) {
-      setError(e?.message ?? 'Could not save. Check your connection and try again.');
+      setError(e?.message ?? t('common.saveError'));
     } finally {
       setBusy(false);
     }
@@ -60,15 +62,15 @@ export function InputSheet({ visible, title, fields, submitLabel = 'Save', onSub
                   placeholder={f.placeholder}
                   placeholderTextColor={colors.textDim}
                   keyboardType={f.keyboardType ?? 'default'}
-                  style={styles.input}
+                  style={[styles.input, isRTL && styles.inputRTL]}
                 />
               </View>
             </View>
           ))}
           {error && <Txt variant="caption" color={colors.danger} style={{ marginTop: 12 }}>{error}</Txt>}
-          <Button title={submitLabel} onPress={submit} disabled={!canSubmit} loading={busy} style={{ marginTop: 20 }} />
+          <Button title={submitLabel ?? t('common.save')} onPress={submit} disabled={!canSubmit} loading={busy} style={{ marginTop: 20 }} />
           <Pressable onPress={onClose} style={{ marginTop: 12, alignSelf: 'center' }} hitSlop={8}>
-            <Txt variant="caption">Cancel</Txt>
+            <Txt variant="caption">{t('common.cancel')}</Txt>
           </Pressable>
         </View>
       </KeyboardAvoidingView>
@@ -87,4 +89,5 @@ const styles = StyleSheet.create({
   },
   inputWrap: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14 },
   input: { color: colors.textPrimary, fontFamily: fonts.regular, fontSize: 16, paddingVertical: 13 },
+  inputRTL: { fontFamily: undefined, textAlign: 'right', writingDirection: 'rtl' },
 });
