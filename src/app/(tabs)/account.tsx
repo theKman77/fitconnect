@@ -15,12 +15,13 @@ export default function Account() {
   const router = useRouter();
   const { profile, updateProfile, refreshProfile, signOut } = useAuth();
   const [becoming, setBecoming] = useState(false);
+  const { locale, isRTL, tr } = useLocale();
 
   function onBecomeTrainer() {
     confirm(
       {
-        title: 'Become a trainer',
-        message: 'Set up a trainer profile so clients can book you. You can switch back to client view anytime.',
+        title: tr('Become a trainer'),
+        message: tr('Set up a trainer profile so clients can book you. You can switch back to client view anytime.'),
       },
       async () => {
         if (!profile) return;
@@ -30,7 +31,7 @@ export default function Account() {
           await refreshProfile();
           router.replace('/(trainer)' as Href);
         } catch (e: any) {
-          notify('Trainer setup failed', e?.message ?? 'Please try again.');
+          notify(tr('Trainer setup failed'), e?.message ?? tr('Please try again.'));
         } finally {
           setBecoming(false);
         }
@@ -40,16 +41,18 @@ export default function Account() {
 
   async function shareReferral() {
     const code = profile?.referral_code ?? 'FIT-FRIEND';
-    const message = `Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${code}.`;
+    const message = locale === 'ar'
+      ? `جرّب FitConnect، منصة سعودية لحجز المدربين الشخصيين. رمز دعوتي هو ${code}.`
+      : `Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${code}.`;
     try {
       await Share.share({ message });
     } catch {
       // Web without the native share sheet: copy to clipboard instead.
       try {
         await (navigator as any)?.clipboard?.writeText(message);
-        notify('Copied', 'Your invite message is on the clipboard — paste it anywhere.');
+        notify(tr('Copied'), tr('Your invite message is on the clipboard — paste it anywhere.'));
       } catch {
-        notify('Your code', code);
+        notify(tr('Your code'), code);
       }
     }
   }
@@ -58,7 +61,7 @@ export default function Account() {
     try {
       await updateProfile(patch);
     } catch (e: any) {
-      notify('Preference not saved', e?.message ?? 'Please try again.');
+      notify(tr('Preference not saved'), e?.message ?? tr('Please try again.'));
     }
   }
 
@@ -66,75 +69,75 @@ export default function Account() {
     <SafeAreaView style={styles.root} edges={['top']}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 24 }}>
         <View style={styles.header}>
-          <Txt style={styles.headerKicker}>YOUR FITCONNECT</Txt>
-          <Txt variant="screenTitle">Your space</Txt>
+          <Txt style={styles.headerKicker}>{tr('YOUR FITCONNECT')}</Txt>
+          <Txt variant="screenTitle">{tr('Your space')}</Txt>
         </View>
 
         {/* Profile */}
         <View style={styles.section}>
           <Card onPress={() => router.push('/edit-profile')} style={styles.profileCard}>
-            <View style={styles.profile}>
+            <View style={[styles.profile, isRTL && styles.rtlRow]}>
               <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={56} />
               <View style={{ flex: 1 }}>
-                <Txt variant="cardTitle">{profile?.full_name ?? 'Your name'}</Txt>
-                <Txt variant="caption" style={{ marginTop: 3 }}>{profile?.city ?? 'Saudi Arabia'} · FitConnect member</Txt>
+                <Txt variant="cardTitle">{profile?.full_name ?? tr('Your name')}</Txt>
+                <Txt variant="caption" style={{ marginTop: 3 }}>{profile?.city ?? tr('Saudi Arabia')} · {tr('FitConnect member')}</Txt>
               </View>
-              <Txt variant="caption" color={colors.primary} style={{ marginRight: 4 }}>Edit</Txt>
-              <Ionicons name="chevron-forward" size={20} color={colors.textDim} />
+              <Txt variant="caption" color={colors.primary} style={isRTL ? { marginLeft: 4 } : { marginRight: 4 }}>{tr('Edit')}</Txt>
+              <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={20} color={colors.textDim} />
             </View>
           </Card>
         </View>
 
-        <Section title="Membership & bookings">
-          <Row icon="card" label="Membership plans" value="Preview" onPress={() => router.push('/membership')} />
-          <Row icon="heart" label="Favorite trainers" onPress={() => router.push('/favorites')} />
-          <Row icon="time" label="Session history" onPress={() => router.push('/history')} />
-          <Row icon="wallet" label="Payment methods" value="Not connected" onPress={() => router.push('/payment-methods')} />
+        <Section title={tr('Membership & bookings')}>
+          <Row icon="card" label={tr('Membership plans')} value={tr('Preview')} onPress={() => router.push('/membership')} />
+          <Row icon="heart" label={tr('Favorite trainers')} onPress={() => router.push('/favorites')} />
+          <Row icon="time" label={tr('Session history')} onPress={() => router.push('/history')} />
+          <Row icon="wallet" label={tr('Payment methods')} value={tr('Not connected')} onPress={() => router.push('/payment-methods')} />
         </Section>
 
-        <Section title="You">
-          <Row icon="stats-chart" label="Progress & measurements" onPress={() => router.push('/(tabs)/progress')} />
-          <Row icon="extension-puzzle" label="Connected apps & integrations" value="View" onPress={() => router.push('/integrations' as any)} />
-          <Row icon="gift" label="Share your FitConnect invite"
+        <Section title={tr('You')}>
+          <Row icon="stats-chart" label={tr('Progress & measurements')} onPress={() => router.push('/(tabs)/progress')} />
+          <Row icon="extension-puzzle" label={tr('Connected apps & integrations')} value={tr('View')} onPress={() => router.push('/integrations' as any)} />
+          <Row icon="gift" label={tr('Share your FitConnect invite')}
             value={profile?.referral_code ?? undefined} onPress={shareReferral} />
-          <Row icon="logo-whatsapp" label="Invite via WhatsApp"
-            onPress={() => shareOnWhatsApp(`Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${profile?.referral_code ?? 'FIT-FRIEND'}.`)} />
+          <Row icon="logo-whatsapp" label={tr('Invite via WhatsApp')}
+            onPress={() => shareOnWhatsApp(locale === 'ar' ? `جرّب FitConnect. رمز دعوتي هو ${profile?.referral_code ?? 'FIT-FRIEND'}.` : `Take a look at FitConnect — a Saudi trainer-booking marketplace in development. My invite code is ${profile?.referral_code ?? 'FIT-FRIEND'}.`)} />
         </Section>
 
-        <Section title="Language · اللغة">
+        <Section title={tr('Language · اللغة')}>
           <LanguageRow />
         </Section>
 
         {/* Safety & accessibility */}
-        <Section title="Safety & accessibility">
-          <Row icon="alert-circle" label="Emergency contact"
-            value={profile?.emergency_contact_name ? `${profile.emergency_contact_name}` : 'Add'}
+        <Section title={tr('Safety & accessibility')}>
+          <Row icon="alert-circle" label={tr('Emergency contact')}
+            value={profile?.emergency_contact_name ? `${profile.emergency_contact_name}` : tr('Add')}
             onPress={() => router.push('/edit-profile')} />
-          <ToggleRow icon="contrast" label="High-contrast mode"
+          <ToggleRow icon="contrast" label={tr('High-contrast mode')}
             value={!!profile?.high_contrast} onChange={(v) => savePreference({ high_contrast: v })} />
-          <ToggleRow icon="text" label="Large text"
+          <ToggleRow icon="text" label={tr('Large text')}
             value={!!profile?.large_text} onChange={(v) => savePreference({ large_text: v })} />
         </Section>
 
         {/* Become a trainer */}
         <View style={[styles.section, { marginTop: 20 }]}>
           <Card onPress={onBecomeTrainer}>
-            <View style={styles.becomeRow}>
+            <View style={[styles.becomeRow, isRTL && styles.rtlRow]}>
               <View style={styles.becomeIcon}><Ionicons name="barbell" size={20} color={colors.primary} /></View>
               <View style={{ flex: 1 }}>
-                <Txt variant="bodyStrong">{becoming ? 'Setting up…' : 'Become a trainer'}</Txt>
-                <Txt variant="caption" style={{ marginTop: 2 }}>Offer sessions and earn on FitConnect</Txt>
+                <Txt variant="bodyStrong">{becoming ? tr('Setting up…') : tr('Become a trainer')}</Txt>
+                <Txt variant="caption" style={{ marginTop: 2 }}>{tr('Offer sessions and earn on FitConnect')}</Txt>
               </View>
-              <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+              <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.textDim} />
             </View>
           </Card>
         </View>
 
         <View style={[styles.section, { marginTop: 12 }]}>
           <Card onPress={async () => { await signOut(); router.replace('/(auth)/welcome'); }}>
-            <View style={styles.signout}>
+            <View style={[styles.signout, isRTL && styles.rtlRow]}>
               <Ionicons name="log-out-outline" size={20} color={colors.danger} />
-              <Txt variant="bodyStrong" color={colors.danger}>Sign out</Txt>
+              <Txt variant="bodyStrong" color={colors.danger}>{tr('Sign out')}</Txt>
             </View>
           </Card>
         </View>
@@ -144,23 +147,23 @@ export default function Account() {
 }
 
 function LanguageRow() {
-  const { locale, setLocale, t, isRTL } = useLocale();
+  const { locale, setLocale, t, tr, isRTL } = useLocale();
   const changeLanguage = async (next: 'en' | 'ar') => {
     try {
       await setLocale(next);
     } catch (e: any) {
-      notify('Language not saved', e?.message ?? 'Please try again.');
+      notify(tr('Language not saved'), e?.message ?? tr('Please try again.'));
     }
   };
 
   return (
-    <View style={[styles.languageRow, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+    <View style={[styles.languageRow, isRTL && styles.rtlRow]}>
       <View style={styles.rowIcon}><Ionicons name="language" size={18} color={colors.primary} /></View>
       <View style={{ flex: 1 }}>
         <Txt variant="bodyStrong">{t('language.title')}</Txt>
         <Txt variant="caption" style={{ marginTop: 2 }}>{t('language.subtitle')}</Txt>
       </View>
-      <View style={[styles.languageToggle, isRTL && Platform.OS !== 'web' && { flexDirection: 'row-reverse' }]}>
+      <View style={[styles.languageToggle, isRTL && styles.rtlRow]}>
         {(['en', 'ar'] as const).map((option) => (
           <Pressable key={option} onPress={() => changeLanguage(option)} style={[styles.languageOption, locale === option && styles.languageOptionOn]}>
             <Txt style={[styles.languageOptionText, locale === option && { color: colors.white }]}>{option === 'en' ? 'EN' : 'ع'}</Txt>
@@ -183,12 +186,13 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 function Row({ icon, label, value, onPress }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value?: string; onPress?: () => void;
 }) {
+  const { isRTL } = useLocale();
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, pressed && onPress ? { opacity: 0.7 } : null]}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.row, isRTL && styles.rtlRow, pressed && onPress ? { opacity: 0.7 } : null]}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={colors.primary} /></View>
       <Txt variant="bodyStrong" style={{ flex: 1 }}>{label}</Txt>
-      {value && <Txt variant="caption" style={{ marginRight: 6 }}>{value}</Txt>}
-      <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+      {value && <Txt variant="caption" style={isRTL ? { marginLeft: 6 } : { marginRight: 6 }}>{value}</Txt>}
+      <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.textDim} />
     </Pressable>
   );
 }
@@ -196,8 +200,9 @@ function Row({ icon, label, value, onPress }: {
 function ToggleRow({ icon, label, value, onChange }: {
   icon: keyof typeof Ionicons.glyphMap; label: string; value: boolean; onChange: (v: boolean) => void;
 }) {
+  const { isRTL } = useLocale();
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, isRTL && styles.rtlRow]}>
       <View style={styles.rowIcon}><Ionicons name={icon} size={18} color={colors.primary} /></View>
       <Txt variant="bodyStrong" style={{ flex: 1 }}>{label}</Txt>
       <Switch
@@ -232,4 +237,5 @@ const styles = StyleSheet.create({
   signout: { flexDirection: 'row', alignItems: 'center', gap: 10, justifyContent: 'center' },
   becomeRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
   becomeIcon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

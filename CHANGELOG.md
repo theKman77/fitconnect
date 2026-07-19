@@ -1,5 +1,18 @@
 # Changelog
 
+## 2026-07-19 — Arabic account and trainer operations
+
+- Localized the client Account area, profile editor, favorites, session history, memberships, payment readiness, integrations, referrals, booking confirmation, and password recovery.
+- Localized the trainer Business Hub, bookings, messages, account/application controls, availability and payout links, trainer offer editor, video upload, booking status management, and client chat.
+- Added a centralized Arabic phrase catalog for operational screens, RTL row/input behavior, Arabic dates and counts, and localized share/calendar content while retaining stable backend values.
+- Expanded the browser walkthrough with Arabic Account and Integrations checks.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized bilingual browser walkthrough passes with no serious browser errors.
+
 ## 2026-07-19 — Arabic client journey
 
 ### Bilingual marketplace experience

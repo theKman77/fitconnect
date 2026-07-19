@@ -12,12 +12,15 @@ import { supabase, isBackendConfigured } from '@/lib/supabase';
 import { notify } from '@/lib/confirm';
 import { Button, Chip, Txt } from '@/components/ui';
 import type { Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
+import { localizeDomain } from '@/lib/localize-domain';
 
 const SPECIALTIES = ['Strength', 'Conditioning', 'HIIT', 'Boxing', 'Yoga', 'Mobility', 'Pilates', 'Running', 'Powerlifting', 'Nutrition'];
 
 export default function TrainerEdit() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { locale, isRTL, tr } = useLocale();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [headline, setHeadline] = useState('');
   const [bio, setBio] = useState('');
@@ -37,8 +40,8 @@ export default function TrainerEdit() {
       setPrice(String(t.base_price));
       setSpecs(t.specialties);
       setVideoUrl(t.video_intro_url);
-    }).catch(() => setLoadError('Could not load trainer settings.'));
-  }, [profile]));
+    }).catch(() => setLoadError(tr('Could not load trainer settings.')));
+  }, [profile, tr]));
 
   const toggleSpec = (s: string) =>
     setSpecs((cur) => (cur.includes(s) ? cur.filter((x) => x !== s) : [...cur, s]));
@@ -56,7 +59,7 @@ export default function TrainerEdit() {
       const url = await uploadFile('videos', profile.id, result.assets[0].uri, extFor(result.assets[0].uri, 'video'));
       setVideoUrl(url);
     } catch (e: any) {
-      notify('Upload failed', e?.message ?? 'Could not upload the video.');
+      notify(tr('Upload failed'), e?.message ?? tr('Could not upload the video.'));
     } finally {
       setUploading(false);
     }
@@ -86,7 +89,7 @@ export default function TrainerEdit() {
       }
       router.back();
     } catch (e: any) {
-      notify('Changes not saved', e?.message ?? 'Check your connection and try again.');
+      notify(tr('Changes not saved'), e?.message ?? tr('Check your connection and try again.'));
     } finally {
       setSaving(false);
     }
@@ -94,58 +97,58 @@ export default function TrainerEdit() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.textPrimary} />
         </Pressable>
-        <Txt variant="sectionTitle">Trainer settings</Txt>
+        <Txt variant="sectionTitle">{tr('Trainer settings')}</Txt>
         <View style={{ width: 24 }} />
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
         <ScrollView contentContainerStyle={{ padding: 22 }} showsVerticalScrollIndicator={false}>
           {loadError && <Txt variant="caption" color={colors.danger} style={{ marginBottom: 10 }}>{loadError}</Txt>}
-          <Txt variant="label" style={styles.label}>Headline</Txt>
-          <Field value={headline} onChangeText={setHeadline} placeholder="e.g. Strength & conditioning coach" />
+          <Txt variant="label" style={styles.label}>{tr('Headline')}</Txt>
+          <Field value={headline} onChangeText={setHeadline} placeholder={isRTL ? 'مثال: مدرب قوة ولياقة' : 'e.g. Strength & conditioning coach'} />
 
-          <Txt variant="label" style={styles.label}>Bio</Txt>
+          <Txt variant="label" style={styles.label}>{tr('Bio')}</Txt>
           <View style={styles.fieldWrap}>
-            <TextInput value={bio} onChangeText={setBio} placeholder="Tell clients how you coach…"
-              placeholderTextColor={colors.textDim} multiline style={[styles.input, { minHeight: 90, textAlignVertical: 'top' }]} />
+            <TextInput value={bio} onChangeText={setBio} placeholder={tr('Tell clients how you coach…')}
+              placeholderTextColor={colors.textDim} multiline style={[styles.input, { minHeight: 90, textAlignVertical: 'top' }, isRTL && styles.inputRTL]} />
           </View>
 
-          <Txt variant="label" style={styles.label}>Price per session (SAR)</Txt>
+          <Txt variant="label" style={styles.label}>{tr('Price per session (SAR)')}</Txt>
           <Field value={price} onChangeText={setPrice} placeholder="200" keyboardType="numeric" />
           <Txt variant="caption" style={{ marginTop: 6 }}>
-            Pack and monthly plan prices update automatically from this rate.
+            {tr('Pack and monthly plan prices update automatically from this rate.')}
           </Txt>
 
-          <Txt variant="label" style={styles.label}>Specialties</Txt>
-          <View style={styles.chips}>
+          <Txt variant="label" style={styles.label}>{tr('Specialties')}</Txt>
+          <View style={[styles.chips, isRTL && styles.rtlWrap]}>
             {SPECIALTIES.map((s) => (
-              <Chip key={s} label={s} selected={specs.includes(s)} onPress={() => toggleSpec(s)} />
+              <Chip key={s} label={localizeDomain(s, locale)} selected={specs.includes(s)} onPress={() => toggleSpec(s)} />
             ))}
           </View>
 
-          <Txt variant="label" style={styles.label}>Video intro</Txt>
-          <Pressable style={styles.videoBtn} onPress={pickVideo} disabled={uploading}>
+          <Txt variant="label" style={styles.label}>{tr('Video intro')}</Txt>
+          <Pressable style={[styles.videoBtn, isRTL && styles.rtlRow]} onPress={pickVideo} disabled={uploading}>
             <Ionicons name={videoUrl ? 'checkmark-circle' : 'videocam'} size={20} color={colors.primary} />
             <View style={{ flex: 1 }}>
               <Txt variant="bodyStrong">
-                {uploading ? 'Uploading…' : videoUrl ? 'Video uploaded — tap to replace' : 'Upload a video intro'}
+                {uploading ? tr('Uploading…') : videoUrl ? tr('Video uploaded — tap to replace') : tr('Upload a video intro')}
               </Txt>
-              <Txt variant="caption" style={{ marginTop: 2 }}>Up to 60 seconds. Shown on your public profile.</Txt>
+              <Txt variant="caption" style={{ marginTop: 2 }}>{tr('Up to 60 seconds. Shown on your public profile.')}</Txt>
             </View>
           </Pressable>
           {videoUrl && (
             <Pressable onPress={() => setVideoUrl(null)} style={{ marginTop: 10, alignSelf: 'flex-start' }} hitSlop={6}>
-              <Txt variant="caption" color={colors.danger}>Remove video</Txt>
+              <Txt variant="caption" color={colors.danger}>{tr('Remove video')}</Txt>
             </Pressable>
           )}
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button title="Save changes" onPress={save} loading={saving} />
+          <Button title={tr('Save changes')} onPress={save} loading={saving} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -153,9 +156,10 @@ export default function TrainerEdit() {
 }
 
 function Field(props: React.ComponentProps<typeof TextInput>) {
+  const { isRTL } = useLocale();
   return (
     <View style={styles.fieldWrap}>
-      <TextInput {...props} placeholderTextColor={colors.textDim} style={styles.input} />
+      <TextInput {...props} placeholderTextColor={colors.textDim} style={[styles.input, isRTL && styles.inputRTL]} />
     </View>
   );
 }
@@ -173,4 +177,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg, padding: 16,
   },
   footer: { padding: 22, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
+  rtlWrap: { direction: 'ltr', flexDirection: 'row-reverse' },
+  inputRTL: { textAlign: 'right', writingDirection: 'rtl' },
 });

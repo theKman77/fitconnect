@@ -6,6 +6,7 @@ import { colors, fonts, radius } from '@/theme';
 import { addSessionToCalendar, shareOnWhatsApp } from '@/lib/integrations';
 import { config } from '@/lib/config';
 import { Txt } from '@/components/ui';
+import { useLocale } from '@/context/locale';
 
 type Status = 'ready' | 'setup' | 'mobile';
 
@@ -17,36 +18,37 @@ const STATUS: Record<Status, { label: string; color: string; bg: string }> = {
 
 export default function Integrations() {
   const router = useRouter();
+  const { isRTL, tr } = useLocale();
   return (
     <SafeAreaView style={styles.root} edges={['top', 'bottom']}>
-      <View style={styles.header}>
-        <Pressable style={styles.back} onPress={() => router.back()}><Ionicons name="chevron-back" size={21} color={colors.textPrimary} /></Pressable>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
+        <Pressable style={styles.back} onPress={() => router.back()}><Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={21} color={colors.textPrimary} /></Pressable>
         <View style={{ flex: 1 }}>
-          <Txt style={styles.kicker}>CONNECTED EXPERIENCE</Txt>
-          <Txt style={styles.title}>Integrations</Txt>
+          <Txt style={styles.kicker}>{tr('CONNECTED EXPERIENCE')}</Txt>
+          <Txt style={styles.title}>{tr('Integrations')}</Txt>
         </View>
       </View>
       <ScrollView contentInsetAdjustmentBehavior="automatic" showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <View style={styles.hero}>
           <View style={styles.heroIcon}><Ionicons name="extension-puzzle" size={25} color={colors.primary} /></View>
-          <Txt style={styles.heroTitle}>FitConnect works better with the tools you already use.</Txt>
-          <Txt style={styles.heroCopy}>Every item below shows its honest readiness. Nothing is presented as connected until it can actually work.</Txt>
+          <Txt style={styles.heroTitle}>{tr('FitConnect works better with the tools you already use.')}</Txt>
+          <Txt style={styles.heroCopy}>{tr('Every item below shows its honest readiness. Nothing is presented as connected until it can actually work.')}</Txt>
         </View>
 
-        <Txt style={styles.sectionLabel}>WORKING ON WEB TODAY</Txt>
-        <IntegrationCard icon="logo-whatsapp" name="WhatsApp" description="Share FitConnect and referral codes through WhatsApp or WhatsApp Web." status="ready" action="Try it" onPress={() => shareOnWhatsApp('Take a look at FitConnect — book trusted personal trainers across Riyadh.')} />
-        <IntegrationCard icon="calendar" name="Calendar" description="Add a FitConnect session to Google Calendar from any device." status="ready" action="Add sample" onPress={() => addSessionToCalendar({ title: 'FitConnect training session', details: 'Sample calendar integration', location: 'Riyadh', start: new Date(Date.now() + 86400000), durationMin: 60 })} />
-        <IntegrationCard icon="logo-instagram" name="Social profiles" description="Clients and trainers can publish Instagram, TikTok, X and YouTube links." status="ready" action="Edit socials" onPress={() => router.push('/edit-profile')} />
-        <IntegrationCard icon="logo-google" name="Google sign-in" description="Connected through Supabase and verified by the founder on the live web app." status="ready" />
+        <Txt style={styles.sectionLabel}>{tr('WORKING ON WEB TODAY')}</Txt>
+        <IntegrationCard icon="logo-whatsapp" name="WhatsApp" description={tr('Share FitConnect and referral codes through WhatsApp or WhatsApp Web.')} status="ready" action={tr('Try it')} onPress={() => shareOnWhatsApp(isRTL ? 'جرّب FitConnect واحجز مدربين شخصيين موثوقين في الرياض.' : 'Take a look at FitConnect — book trusted personal trainers across Riyadh.')} />
+        <IntegrationCard icon="calendar" name={tr('Calendar')} description={tr('Add a FitConnect session to Google Calendar from any device.')} status="ready" action={tr('Add sample')} onPress={() => addSessionToCalendar({ title: isRTL ? 'جلسة تدريب FitConnect' : 'FitConnect training session', details: isRTL ? 'مثال لتكامل التقويم' : 'Sample calendar integration', location: isRTL ? 'الرياض' : 'Riyadh', start: new Date(Date.now() + 86400000), durationMin: 60 })} />
+        <IntegrationCard icon="logo-instagram" name={tr('Social profiles')} description={tr('Clients and trainers can publish Instagram, TikTok, X and YouTube links.')} status="ready" action={tr('Edit socials')} onPress={() => router.push('/edit-profile')} />
+        <IntegrationCard icon="logo-google" name={tr('Google sign-in')} description={tr('Connected through Supabase and verified by the founder on the live web app.')} status="ready" />
 
-        <Txt style={styles.sectionLabel}>OWNER SETUP REQUIRED</Txt>
-        <IntegrationCard icon="card" name="Moyasar · mada · Apple Pay" description={config.paymentsEnabled ? 'Live payment mode is enabled.' : 'Checkout stays an unpaid demo until the business has a CR and Moyasar approval.'} status={config.paymentsEnabled ? 'ready' : 'setup'} />
+        <Txt style={styles.sectionLabel}>{tr('OWNER SETUP REQUIRED')}</Txt>
+        <IntegrationCard icon="card" name="Moyasar · mada · Apple Pay" description={tr(config.paymentsEnabled ? 'Live payment mode is enabled.' : 'Checkout stays an unpaid demo until the business has a CR and Moyasar approval.')} status={config.paymentsEnabled ? 'ready' : 'setup'} />
 
-        <Txt style={styles.sectionLabel}>MOBILE APP PHASE</Txt>
-        <IntegrationCard icon="heart" name="Apple Health & Health Connect" description="Import workouts, active calories and optional progress measurements with consent." status="mobile" />
-        <IntegrationCard icon="navigate" name="Live trainer location" description="Realtime location is implemented; the interactive map requires the installable mobile build." status="mobile" />
-        <IntegrationCard icon="notifications" name="Push notifications" description="Booking alerts are implemented and activate inside the installable mobile build." status="mobile" />
-        <IntegrationCard icon="logo-apple" name="Sign in with Apple" description="Required alongside Google sign-in for the eventual iOS App Store release." status="mobile" />
+        <Txt style={styles.sectionLabel}>{tr('MOBILE APP PHASE')}</Txt>
+        <IntegrationCard icon="heart" name={tr('Apple Health & Health Connect')} description={tr('Import workouts, active calories and optional progress measurements with consent.')} status="mobile" />
+        <IntegrationCard icon="navigate" name={tr('Live trainer location')} description={tr('Realtime location is implemented; the interactive map requires the installable mobile build.')} status="mobile" />
+        <IntegrationCard icon="notifications" name={tr('Push notifications')} description={tr('Booking alerts are implemented and activate inside the installable mobile build.')} status="mobile" />
+        <IntegrationCard icon="logo-apple" name={tr('Sign in with Apple')} description={tr('Required alongside Google sign-in for the eventual iOS App Store release.')} status="mobile" />
       </ScrollView>
     </SafeAreaView>
   );
@@ -54,16 +56,17 @@ export default function Integrations() {
 
 function IntegrationCard({ icon, name, description, status, action, onPress }: { icon: keyof typeof Ionicons.glyphMap; name: string; description: string; status: Status; action?: string; onPress?: () => void }) {
   const meta = STATUS[status];
+  const { isRTL, tr } = useLocale();
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, isRTL && styles.rtlRow]}>
       <View style={styles.cardIcon}><Ionicons name={icon} size={22} color={colors.primary} /></View>
       <View style={{ flex: 1 }}>
-        <View style={styles.cardTop}>
+        <View style={[styles.cardTop, isRTL && styles.rtlRow]}>
           <Txt style={styles.cardTitle}>{name}</Txt>
-          <View style={[styles.status, { backgroundColor: meta.bg }]}><Txt style={[styles.statusText, { color: meta.color }]}>{meta.label}</Txt></View>
+          <View style={[styles.status, { backgroundColor: meta.bg }]}><Txt style={[styles.statusText, { color: meta.color }]}>{tr(meta.label)}</Txt></View>
         </View>
         <Txt style={styles.cardCopy}>{description}</Txt>
-        {action && onPress && <Pressable onPress={onPress} style={styles.action}><Txt style={styles.actionText}>{action}</Txt><Ionicons name="arrow-forward" size={14} color={colors.primary} /></Pressable>}
+        {action && onPress && <Pressable onPress={onPress} style={[styles.action, isRTL && styles.rtlRow]}><Txt style={styles.actionText}>{action}</Txt><Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={14} color={colors.primary} /></Pressable>}
       </View>
     </View>
   );
@@ -90,4 +93,5 @@ const styles = StyleSheet.create({
   statusText: { fontFamily: fonts.bold, fontSize: 9, letterSpacing: 0.3 },
   action: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
   actionText: { fontFamily: fonts.bold, fontSize: 12, color: colors.primary },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

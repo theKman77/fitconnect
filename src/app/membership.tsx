@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ar';
 import { colors, fonts, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { confirm, notify } from '@/lib/confirm';
@@ -12,6 +13,7 @@ import { listTrainers } from '@/lib/api';
 import { getMySubscription, setSubscriptionStatus } from '@/lib/subscriptions';
 import { Badge, Button, Card, EmptyState, Txt } from '@/components/ui';
 import type { Subscription, Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
 
 const PERKS = [
   { icon: 'chatbubbles', label: 'Unlimited chat support' },
@@ -22,6 +24,7 @@ const PERKS = [
 export default function Membership() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { locale, localeTag, isRTL, tr } = useLocale();
   const [sub, setSub] = useState<Subscription | null>(null);
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -33,15 +36,15 @@ export default function Membership() {
       setSub(await getMySubscription(profile?.id ?? 'demo-client'));
       setTrainers(await listTrainers());
     } catch (e: any) {
-      setError(e?.message ?? 'Could not load membership information.');
+      setError(e?.message ?? tr('Could not load membership information.'));
     } finally {
       setLoaded(true);
     }
-  }, [profile?.id]);
+  }, [profile?.id, tr]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const trainerName = sub ? trainers.find((t) => t.id === sub.trainer_id)?.display_name ?? 'your trainer' : '';
+  const trainerName = sub ? trainers.find((t) => t.id === sub.trainer_id)?.display_name ?? tr('your trainer') : '';
   const paused = sub?.status === 'paused';
 
   async function setStatus(status: 'active' | 'paused' | 'cancelled') {
@@ -50,16 +53,16 @@ export default function Membership() {
       await setSubscriptionStatus(sub.id, status);
       await load();
     } catch (e: any) {
-      notify('Membership not changed', e?.message ?? 'Please try again.');
+      notify(tr('Membership not changed'), e?.message ?? tr('Please try again.'));
     }
   }
 
   function cancelPlan() {
     confirm(
       {
-        title: 'Cancel membership?',
-        message: 'You keep your remaining sessions until the end of the billing period.',
-        confirmLabel: 'Cancel plan',
+        title: tr('Cancel membership?'),
+        message: tr('You keep your remaining sessions until the end of the billing period.'),
+        confirmLabel: tr('Cancel plan'),
         destructive: true,
       },
       () => setStatus('cancelled'),
@@ -68,11 +71,11 @@ export default function Membership() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.textPrimary} />
         </Pressable>
-        <Txt variant="sectionTitle">Membership</Txt>
+        <Txt variant="sectionTitle">{tr('Membership')}</Txt>
         <View style={{ width: 24 }} />
       </View>
 
@@ -81,9 +84,9 @@ export default function Membership() {
         {loaded && !sub && (
           <EmptyState
             icon="card"
-            title="No membership yet"
-            subtitle="Monthly plans are a preview until recurring payments and entitlement tracking are connected."
-            actionLabel="Browse trainers"
+            title={tr('No membership yet')}
+            subtitle={tr('Monthly plans are a preview until recurring payments and entitlement tracking are connected.')}
+            actionLabel={tr('Browse trainers')}
             onAction={() => router.push('/(tabs)/discover')}
           />
         )}
@@ -91,33 +94,33 @@ export default function Membership() {
         {sub && (
           <>
             {paused && (
-              <View style={styles.pausedBanner}>
+              <View style={[styles.pausedBanner, isRTL && styles.rtlRow]}>
                 <Ionicons name="pause-circle" size={18} color={colors.warning} />
-                <Txt variant="caption" style={{ flex: 1 }}>Membership paused. Resume anytime to keep your streak.</Txt>
+                <Txt variant="caption" style={{ flex: 1 }}>{tr('Membership paused. Resume anytime to keep your streak.')}</Txt>
               </View>
             )}
 
             <Card>
-              <View style={styles.planHead}>
+              <View style={[styles.planHead, isRTL && styles.rtlRow]}>
                 <View>
-                  <Txt variant="cardTitle">{sub.plan_name ?? 'Membership'}</Txt>
+                  <Txt variant="cardTitle">{sub.plan_name ?? tr('Membership')}</Txt>
                   <Txt variant="caption" style={{ marginTop: 2 }}>
-                    with {trainerName}
-                    {sub.current_period_end ? ` · renews ${dayjs(sub.current_period_end).format('MMM D')}` : ''}
+                    {locale === 'ar' ? `مع ${trainerName}` : `with ${trainerName}`}
+                    {sub.current_period_end ? locale === 'ar' ? ` · يتجدد ${dayjs(sub.current_period_end).locale(locale).format('D MMM')}` : ` · renews ${dayjs(sub.current_period_end).format('MMM D')}` : ''}
                   </Txt>
                 </View>
-                <Badge label={paused ? 'PAUSED' : 'ACTIVE'} tone={paused ? 'neutral' : 'success'} />
+                <Badge label={tr(paused ? 'PAUSED' : 'ACTIVE')} tone={paused ? 'neutral' : 'success'} />
               </View>
               {sub.price != null && (
-                <View style={styles.priceRow}>
+                <View style={[styles.priceRow, isRTL && styles.rtlRow]}>
                   <Txt style={styles.price}>{formatMoney(sub.price)}</Txt>
-                  <Txt variant="caption">/mo</Txt>
+                  <Txt variant="caption">{locale === 'ar' ? '/شهر' : '/mo'}</Txt>
                 </View>
               )}
               <View style={styles.progressWrap}>
-                <View style={styles.progressHead}>
-                  <Txt variant="caption">{sub.sessions_used} of {sub.sessions_included} sessions used</Txt>
-                  <Txt variant="caption" color={colors.primary}>{Math.max(0, sub.sessions_included - sub.sessions_used)} left</Txt>
+                <View style={[styles.progressHead, isRTL && styles.rtlRow]}>
+                  <Txt variant="caption">{locale === 'ar' ? `${new Intl.NumberFormat(localeTag).format(sub.sessions_used)} من ${new Intl.NumberFormat(localeTag).format(sub.sessions_included)} جلسات مستخدمة` : `${sub.sessions_used} of ${sub.sessions_included} sessions used`}</Txt>
+                  <Txt variant="caption" color={colors.primary}>{new Intl.NumberFormat(localeTag).format(Math.max(0, sub.sessions_included - sub.sessions_used))} {tr('left')}</Txt>
                 </View>
                 <View style={styles.bar}>
                   <View style={[styles.barFill, { width: `${Math.min(100, (sub.sessions_used / Math.max(1, sub.sessions_included)) * 100)}%` }]} />
@@ -127,33 +130,33 @@ export default function Membership() {
 
             {sub.loyalty_weeks > 0 && (
               <Card style={{ marginTop: 12 }}>
-                <View style={styles.loyalty}>
+                <View style={[styles.loyalty, isRTL && styles.rtlRow]}>
                   <View style={styles.flame}><Txt style={{ fontSize: 22 }}>🔥</Txt></View>
                   <View style={{ flex: 1 }}>
-                    <Txt variant="bodyStrong">Loyalty streak · {sub.loyalty_weeks} weeks</Txt>
-                    <Txt variant="caption" style={{ marginTop: 2 }}>1 more week unlocks a free nutrition consult.</Txt>
+                    <Txt variant="bodyStrong">{locale === 'ar' ? `استمرارية الولاء · ${new Intl.NumberFormat(localeTag).format(sub.loyalty_weeks)} أسابيع` : `Loyalty streak · ${sub.loyalty_weeks} weeks`}</Txt>
+                    <Txt variant="caption" style={{ marginTop: 2 }}>{locale === 'ar' ? 'أسبوع إضافي يفتح استشارة تغذية مجانية.' : '1 more week unlocks a free nutrition consult.'}</Txt>
                   </View>
                 </View>
               </Card>
             )}
 
-            <Txt variant="label" style={{ marginTop: 22, marginBottom: 12 }}>Your perks</Txt>
+            <Txt variant="label" style={{ marginTop: 22, marginBottom: 12 }}>{tr('Your perks')}</Txt>
             <Card padded={false}>
               {PERKS.map((p, i) => (
-                <View key={p.label} style={[styles.perk, i < PERKS.length - 1 && styles.perkBorder]}>
+                <View key={p.label} style={[styles.perk, isRTL && styles.rtlRow, i < PERKS.length - 1 && styles.perkBorder]}>
                   <Ionicons name={p.icon as any} size={19} color={colors.primary} />
-                  <Txt variant="bodyStrong" style={{ flex: 1 }}>{p.label}</Txt>
+                  <Txt variant="bodyStrong" style={{ flex: 1 }}>{tr(p.label)}</Txt>
                 </View>
               ))}
             </Card>
 
             <View style={{ marginTop: 24, gap: 10 }}>
               <Button
-                title={paused ? 'Resume membership' : 'Pause membership'}
+                title={tr(paused ? 'Resume membership' : 'Pause membership')}
                 variant="secondary"
                 onPress={() => setStatus(paused ? 'active' : 'paused')}
               />
-              <Button title="Cancel membership" variant="ghost" onPress={cancelPlan} />
+              <Button title={tr('Cancel membership')} variant="ghost" onPress={cancelPlan} />
             </View>
           </>
         )}
@@ -181,4 +184,5 @@ const styles = StyleSheet.create({
   flame: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
   perk: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16 },
   perkBorder: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
 });

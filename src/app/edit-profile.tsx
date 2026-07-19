@@ -10,10 +10,12 @@ import { uploadFile, extFor } from '@/lib/storage';
 import { supabase, isBackendConfigured } from '@/lib/supabase';
 import { notify } from '@/lib/confirm';
 import { Avatar, Button, Txt } from '@/components/ui';
+import { useLocale } from '@/context/locale';
 
 export default function EditProfile() {
   const router = useRouter();
   const { profile, updateProfile } = useAuth();
+  const { isRTL, tr } = useLocale();
   const [name, setName] = useState(profile?.full_name ?? '');
   const [city, setCity] = useState(profile?.city ?? '');
   const [phone, setPhone] = useState(profile?.phone ?? '');
@@ -46,7 +48,7 @@ export default function EditProfile() {
         if (error) throw error;
       }
     } catch (e: any) {
-      notify('Upload failed', e?.message ?? 'Could not upload the photo.');
+      notify(tr('Upload failed'), e?.message ?? tr('Could not upload the photo.'));
     } finally {
       setUploading(false);
     }
@@ -78,7 +80,7 @@ export default function EditProfile() {
       }
       router.back();
     } catch (e: any) {
-      notify('Changes not saved', e?.message ?? 'Check your connection and try again.');
+      notify(tr('Changes not saved'), e?.message ?? tr('Check your connection and try again.'));
     } finally {
       setSaving(false);
     }
@@ -86,11 +88,11 @@ export default function EditProfile() {
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.textPrimary} />
         </Pressable>
-        <Txt variant="sectionTitle">Edit profile</Txt>
+        <Txt variant="sectionTitle">{tr('Edit profile')}</Txt>
         <View style={{ width: 24 }} />
       </View>
 
@@ -99,51 +101,51 @@ export default function EditProfile() {
           <View style={styles.avatarWrap}>
             <Pressable onPress={changeAvatar} disabled={uploading}>
               <Avatar uri={profile?.avatar_url} name={name} size={84} />
-              <View style={styles.avatarBadge}>
+              <View style={[styles.avatarBadge, isRTL && { right: undefined, left: -2 }]}>
                 <Ionicons name={uploading ? 'hourglass' : 'camera'} size={14} color={colors.white} />
               </View>
             </Pressable>
             <Txt variant="caption" style={{ marginTop: 8 }}>
-              {uploading ? 'Uploading…' : 'Tap to change photo'}
+              {uploading ? tr('Uploading…') : tr('Tap to change photo')}
             </Txt>
           </View>
 
-          <Txt variant="label" style={styles.label}>Full name</Txt>
-          <Field value={name} onChangeText={setName} placeholder="Your name" />
+          <Txt variant="label" style={styles.label}>{tr('Full name')}</Txt>
+          <Field value={name} onChangeText={setName} placeholder={tr('Your name')} />
 
-          <Txt variant="label" style={styles.label}>City</Txt>
-          <Field value={city} onChangeText={setCity} placeholder="e.g. Riyadh" />
+          <Txt variant="label" style={styles.label}>{tr('City')}</Txt>
+          <Field value={city} onChangeText={setCity} placeholder={isRTL ? 'مثال: الرياض' : 'e.g. Riyadh'} />
 
-          <Txt variant="label" style={styles.label}>Phone</Txt>
+          <Txt variant="label" style={styles.label}>{tr('Phone')}</Txt>
           <Field value={phone} onChangeText={setPhone} placeholder="+966 5x xxx xxxx" keyboardType="phone-pad" />
 
-          <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>Socials</Txt>
+          <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>{tr('Socials')}</Txt>
           <Txt variant="caption" style={{ marginBottom: 10 }}>
-            Shown on your public profile. Handles only — no @ needed.
+            {tr('Shown on your public profile. Handles only — no @ needed.')}
           </Txt>
           <Txt variant="label" style={styles.label}>Instagram</Txt>
-          <Field value={instagram} onChangeText={setInstagram} placeholder="username" autoCapitalize="none" />
+          <Field value={instagram} onChangeText={setInstagram} placeholder={tr('username')} autoCapitalize="none" />
           <Txt variant="label" style={styles.label}>TikTok</Txt>
-          <Field value={tiktok} onChangeText={setTiktok} placeholder="username" autoCapitalize="none" />
+          <Field value={tiktok} onChangeText={setTiktok} placeholder={tr('username')} autoCapitalize="none" />
           <Txt variant="label" style={styles.label}>X (Twitter)</Txt>
-          <Field value={xHandle} onChangeText={setXHandle} placeholder="username" autoCapitalize="none" />
+          <Field value={xHandle} onChangeText={setXHandle} placeholder={tr('username')} autoCapitalize="none" />
           <Txt variant="label" style={styles.label}>YouTube</Txt>
-          <Field value={youtube} onChangeText={setYoutube} placeholder="channel" autoCapitalize="none" />
+          <Field value={youtube} onChangeText={setYoutube} placeholder={tr('channel')} autoCapitalize="none" />
 
-          <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>Emergency contact</Txt>
+          <Txt variant="sectionTitle" style={{ marginTop: 28, marginBottom: 4 }}>{tr('Emergency contact')}</Txt>
           <Txt variant="caption" style={{ marginBottom: 10 }}>
-            Shared with your trainer only if you trigger SOS during a session.
+            {tr('Shared with your trainer only if you trigger SOS during a session.')}
           </Txt>
 
-          <Txt variant="label" style={styles.label}>Contact name</Txt>
-          <Field value={ecName} onChangeText={setEcName} placeholder="e.g. Sam" />
+          <Txt variant="label" style={styles.label}>{tr('Contact name')}</Txt>
+          <Field value={ecName} onChangeText={setEcName} placeholder={isRTL ? 'مثال: سام' : 'e.g. Sam'} />
 
-          <Txt variant="label" style={styles.label}>Contact phone</Txt>
+          <Txt variant="label" style={styles.label}>{tr('Contact phone')}</Txt>
           <Field value={ecPhone} onChangeText={setEcPhone} placeholder="+966 5x xxx xxxx" keyboardType="phone-pad" />
         </ScrollView>
 
         <View style={styles.footer}>
-          <Button title="Save changes" onPress={save} loading={saving} disabled={!name.trim()} />
+          <Button title={tr('Save changes')} onPress={save} loading={saving} disabled={!name.trim()} />
         </View>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -151,9 +153,10 @@ export default function EditProfile() {
 }
 
 function Field(props: React.ComponentProps<typeof TextInput>) {
+  const { isRTL } = useLocale();
   return (
     <View style={styles.fieldWrap}>
-      <TextInput {...props} placeholderTextColor={colors.textDim} style={styles.input} />
+      <TextInput {...props} placeholderTextColor={colors.textDim} style={[styles.input, isRTL && styles.inputRTL]} />
     </View>
   );
 }
@@ -174,4 +177,6 @@ const styles = StyleSheet.create({
   },
   input: { color: colors.textPrimary, fontFamily: fonts.regular, fontSize: 15, paddingVertical: 14 },
   footer: { padding: 22, paddingTop: 12, borderTopWidth: 1, borderTopColor: colors.border },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
+  inputRTL: { textAlign: 'right', writingDirection: 'rtl' },
 });

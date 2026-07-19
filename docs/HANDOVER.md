@@ -89,9 +89,11 @@ date strip).
 3. **Localization is in progress:** English/Arabic preference, real web RTL,
    native-safe shared controls, welcome/navigation, account creation, onboarding,
    Home, Discover, Progress, trainer profiles, and the client booking journey are
-   implemented. Trainer operations, account utilities, chat, payment utilities,
-   and post-session screens still need page-by-page translation. Light theme
-   remains intentionally absent.
+   implemented. Client account utilities, integrations, memberships, payment
+   readiness, trainer Business Hub, bookings, messages, account/application,
+   offer editing, and trainer-side session chat are also localized. Client live
+   tracking and the post-session celebration still need the final page-by-page
+   pass. Light theme remains intentionally absent.
 4. **Availability is intentionally fixed-slot for the MVP:** trainers publish
    one-hour openings from six daily time options in a paged calendar; clients
    consume the same persisted slots. Recurrence, blackout rules, buffers, custom

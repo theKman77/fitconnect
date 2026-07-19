@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ar';
 import { colors, fonts, radius } from '@/theme';
 import { config, formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
@@ -20,12 +21,14 @@ import { tierForSessions, repeatClientFeePct } from '@/lib/gamification';
 import { Avatar, Badge, Card, EmptyState, Skeleton, Txt } from '@/components/ui';
 import { notify } from '@/lib/confirm';
 import type { Booking, Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
 
 const ACTIVE = ['confirmed', 'en_route', 'arriving', 'in_progress'];
 
 export default function TrainerBusinessHub() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { locale, localeTag, isRTL, tr } = useLocale();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [counterparts, setCounterparts] = useState<Record<string, BookingCounterpart>>({});
@@ -50,11 +53,11 @@ export default function TrainerBusinessHub() {
       );
       setCounterparts(Object.fromEntries(people.filter((entry): entry is [string, BookingCounterpart] => !!entry[1])));
     } catch (error: any) {
-      setLoadError(error?.message ?? 'Could not refresh your business hub.');
+      setLoadError(error?.message ?? tr('Could not refresh your business hub.'));
     } finally {
       setLoaded(true);
     }
-  }, [profile]);
+  }, [profile, tr]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -64,7 +67,7 @@ export default function TrainerBusinessHub() {
       await setTrainerOnline(trainer, value);
     } catch (error: any) {
       setOnline(!value);
-      notify('Status not changed', error?.message ?? 'Please try again.');
+      notify(tr('Status not changed'), error?.message ?? tr('Please try again.'));
     }
   }
 
@@ -109,111 +112,110 @@ export default function TrainerBusinessHub() {
         contentContainerStyle={styles.content}
         refreshControl={<RefreshControl refreshing={refreshing} tintColor={colors.primary} onRefresh={async () => { setRefreshing(true); await load(); setRefreshing(false); }} />}
       >
-        <View style={styles.header}>
+        <View style={[styles.header, isRTL && styles.rtlRow]}>
           <View style={{ flex: 1 }}>
-            <Txt variant="monoTag">TRAINER BUSINESS HUB</Txt>
-            <Txt style={styles.title}>Own your day, {firstName}.</Txt>
+            <Txt variant="monoTag">{tr('TRAINER BUSINESS HUB')}</Txt>
+            <Txt style={styles.title}>{isRTL ? `امتلك يومك، ${firstName}.` : `Own your day, ${firstName}.`}</Txt>
           </View>
           <Avatar uri={profile?.avatar_url} name={profile?.full_name} size={48} />
         </View>
 
-        {loadError && <Card><EmptyState icon="cloud-offline-outline" title="Hub unavailable" subtitle={loadError} actionLabel="Try again" onAction={load} /></Card>}
+        {loadError && <Card><EmptyState icon="cloud-offline-outline" title={tr('Hub unavailable')} subtitle={loadError} actionLabel={tr('Try again')} onAction={load} /></Card>}
 
         {!loaded ? <DashboardSkeleton /> : (
           <>
             <View style={styles.commandCard}>
               <LinearGradient colors={['#2A1712', colors.surfaceElevated, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
               <View style={styles.commandGlow} />
-              <View style={styles.onlineRow}>
+              <View style={[styles.onlineRow, isRTL && styles.rtlRow]}>
                 <View style={[styles.statusDot, { backgroundColor: online ? colors.success : colors.textFaint }]} />
                 <View style={{ flex: 1 }}>
-                  <Txt style={styles.onlineTitle}>{online ? 'Open for new clients' : 'Not taking instant bookings'}</Txt>
-                  <Txt style={styles.onlineCopy}>{online ? 'Your profile is visible as available now.' : 'Your published schedule is still bookable.'}</Txt>
+                  <Txt style={styles.onlineTitle}>{tr(online ? 'Open for new clients' : 'Not taking instant bookings')}</Txt>
+                  <Txt style={styles.onlineCopy}>{tr(online ? 'Your profile is visible as available now.' : 'Your published schedule is still bookable.')}</Txt>
                 </View>
                 <Switch value={online} onValueChange={toggleOnline} trackColor={{ false: colors.surfaceHigh, true: colors.success }} thumbColor={colors.white} />
               </View>
 
               <View style={styles.commandDivider} />
               {nextBooking ? (
-                <Pressable onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: nextBooking.id } })} style={styles.nextSession}>
+                <Pressable onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: nextBooking.id } })} style={[styles.nextSession, isRTL && styles.rtlRow]}>
                   <View style={styles.timeTile}>
-                    <Txt style={styles.timeMain}>{dayjs(nextBooking.scheduled_at).format('h:mm')}</Txt>
-                    <Txt style={styles.timePeriod}>{dayjs(nextBooking.scheduled_at).format('A')}</Txt>
+                    <Txt style={styles.timeMain}>{new Intl.DateTimeFormat(localeTag, { hour: 'numeric', minute: '2-digit' }).format(new Date(nextBooking.scheduled_at!))}</Txt>
                   </View>
                   <View style={{ flex: 1 }}>
                     <Txt variant="monoTag">NEXT UP · {dayjs(nextBooking.scheduled_at).format('ddd').toUpperCase()}</Txt>
-                    <Txt variant="bodyStrong" style={{ marginTop: 5 }}>{counterparts[nextBooking.client_id]?.full_name ?? 'Client session'}</Txt>
-                    <Txt variant="caption" style={{ marginTop: 3 }}>{nextBooking.format === 'virtual' ? 'Virtual coaching' : nextBooking.city ?? 'In person'} · {nextBooking.duration_min} min</Txt>
+                    <Txt variant="bodyStrong" style={{ marginTop: 5 }}>{counterparts[nextBooking.client_id]?.full_name ?? tr('Client session')}</Txt>
+                    <Txt variant="caption" style={{ marginTop: 3 }}>{nextBooking.format === 'virtual' ? tr('Virtual coaching') : nextBooking.city ?? tr('In person')} · {new Intl.NumberFormat(localeTag).format(nextBooking.duration_min)} {locale === 'ar' ? 'دقيقة' : 'min'}</Txt>
                   </View>
-                  <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+                  <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={20} color={colors.primary} />
                 </Pressable>
               ) : (
-                <Pressable onPress={() => router.push('/trainer-availability' as any)} style={styles.nextSession}>
+                <Pressable onPress={() => router.push('/trainer-availability' as any)} style={[styles.nextSession, isRTL && styles.rtlRow]}>
                   <View style={styles.emptyNextIcon}><Ionicons name="calendar-outline" size={21} color={colors.primary} /></View>
-                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">Turn empty hours into bookable time</Txt><Txt variant="caption" style={{ marginTop: 3 }}>Publish openings clients can reserve instantly.</Txt></View>
-                  <Ionicons name="arrow-forward" size={20} color={colors.primary} />
+                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">{tr('Turn empty hours into bookable time')}</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{tr('Publish openings clients can reserve instantly.')}</Txt></View>
+                  <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={20} color={colors.primary} />
                 </Pressable>
               )}
             </View>
 
             {trainer?.onboarding_status && trainer.onboarding_status !== 'approved' && (
-              <Pressable onPress={() => router.push('/trainer-edit' as any)} style={styles.reviewBanner}>
+              <Pressable onPress={() => router.push('/trainer-edit' as any)} style={[styles.reviewBanner, isRTL && styles.rtlRow]}>
                 <Ionicons name="document-text-outline" size={19} color={colors.primary} />
-                <View style={{ flex: 1 }}><Txt variant="bodyStrong">Finish your trainer application</Txt><Txt variant="caption" style={{ marginTop: 2 }}>Your public profile stays hidden until it is approved.</Txt></View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textDim} />
+                <View style={{ flex: 1 }}><Txt variant="bodyStrong">{tr('Finish your trainer application')}</Txt><Txt variant="caption" style={{ marginTop: 2 }}>{tr('Your public profile stays hidden until it is approved.')}</Txt></View>
+                <Ionicons name={isRTL ? 'chevron-back' : 'chevron-forward'} size={18} color={colors.textDim} />
               </Pressable>
             )}
 
             <View style={styles.quickGrid}>
-              <QuickAction icon="calendar" label="Schedule" meta={`${bookedDays}/7 active days`} onPress={() => router.push('/trainer-availability' as any)} />
-              <QuickAction icon="sparkles" label="Public profile" meta={`${profileStrength}% complete`} onPress={() => trainer ? router.push(`/trainer/${trainer.id}`) : router.push('/trainer-edit' as any)} />
-              <QuickAction icon="create-outline" label="Edit offer" meta={`From ${formatMoney(trainer?.base_price ?? 0)}`} onPress={() => router.push('/trainer-edit' as any)} />
+              <QuickAction icon="calendar" label={tr('Schedule')} meta={`${new Intl.NumberFormat(localeTag).format(bookedDays)}/٧ ${tr('active days')}`} onPress={() => router.push('/trainer-availability' as any)} />
+              <QuickAction icon="sparkles" label={tr('Public profile')} meta={`${new Intl.NumberFormat(localeTag).format(profileStrength)}٪ ${tr('complete')}`} onPress={() => trainer ? router.push(`/trainer/${trainer.id}`) : router.push('/trainer-edit' as any)} />
+              <QuickAction icon="create-outline" label={tr('Edit offer')} meta={`${tr('From')} ${formatMoney(trainer?.base_price ?? 0)}`} onPress={() => router.push('/trainer-edit' as any)} />
             </View>
 
             <View style={styles.sectionHead}>
-              <View><Txt variant="monoTag">BUSINESS PULSE</Txt><Txt style={styles.sectionTitle}>The numbers that matter</Txt></View>
+              <View><Txt variant="monoTag">{tr('BUSINESS PULSE')}</Txt><Txt style={styles.sectionTitle}>{tr('The numbers that matter')}</Txt></View>
             </View>
             <View style={styles.metrics}>
-              <Metric value={formatMoney(config.paymentsEnabled ? monthEarnings : simulatedPipeline)} label={config.paymentsEnabled ? 'This month' : 'Demo pipeline'} icon={config.paymentsEnabled ? 'wallet' : 'flask'} />
-              <Metric value={`${upcoming.length}`} label="Upcoming" icon="calendar-outline" />
-              <Metric value={`${repeatRate}%`} label="Repeat clients" icon="repeat" />
+              <Metric value={formatMoney(config.paymentsEnabled ? monthEarnings : simulatedPipeline)} label={tr(config.paymentsEnabled ? 'This month' : 'Demo pipeline')} icon={config.paymentsEnabled ? 'wallet' : 'flask'} />
+              <Metric value={new Intl.NumberFormat(localeTag).format(upcoming.length)} label={tr('Upcoming')} icon="calendar-outline" />
+              <Metric value={`${new Intl.NumberFormat(localeTag).format(repeatRate)}٪`} label={tr('Repeat clients')} icon="repeat" />
             </View>
 
             <View style={styles.tierCard}>
               <View style={styles.tierTop}>
                 <View style={styles.tierShield}><Ionicons name={tier.current.icon} size={23} color={colors.primary} /></View>
                 <View style={{ flex: 1 }}>
-                  <Txt variant="monoTag">FITCONNECT PARTNER LEVEL</Txt>
+                  <Txt variant="monoTag">{tr('FITCONNECT PARTNER LEVEL')}</Txt>
                   <Txt style={styles.tierTitle}>{tier.current.name} · {tier.current.feePct}% platform fee</Txt>
                 </View>
-                <Badge label={`${completed.length} SESSIONS`} tone="neutral" />
+                <Badge label={`${new Intl.NumberFormat(localeTag).format(completed.length)} ${tr('SESSIONS')}`} tone="neutral" />
               </View>
               {tier.next ? (
                 <>
                   <View style={styles.tierTrack}><View style={[styles.tierFill, { width: `${Math.max(4, tier.progress * 100)}%` }]} /></View>
                   <Txt variant="caption" style={{ marginTop: 9 }}>{tier.next.minSessions - completed.length} on-platform sessions to {tier.next.name}: {tier.next.feePct}% fee and {tier.next.perks[0].toLowerCase()}.</Txt>
                 </>
-              ) : <Txt variant="caption" style={{ marginTop: 10 }}>Elite status keeps your lowest fee, top discovery position, and future partner perks.</Txt>}
+              ) : <Txt variant="caption" style={{ marginTop: 10 }}>{tr('Elite status keeps your lowest fee, top discovery position, and future partner perks.')}</Txt>}
             </View>
 
             <View style={styles.valueCard}>
               <View style={styles.valueTop}>
                 <View style={styles.valueMark}><Ionicons name="infinite" size={22} color={colors.white} /></View>
-                <View style={{ flex: 1 }}><Txt style={styles.valueTitle}>Your client book compounds here.</Txt><Txt variant="body" style={{ marginTop: 5 }}>Every completed session improves retention economics instead of resetting the relationship.</Txt></View>
+                <View style={{ flex: 1 }}><Txt style={styles.valueTitle}>{tr('Your client book compounds here.')}</Txt><Txt variant="body" style={{ marginTop: 5 }}>{tr('Every completed session improves retention economics instead of resetting the relationship.')}</Txt></View>
               </View>
               <View style={styles.valueList}>
-                <ValueLine icon="trending-down" text="Repeat-client fees can fall as low as 3%." />
-                <ValueLine icon="people" text="Session history and rebooking stay organized per client." />
-                <ValueLine icon="shield-checkmark" text="Payment records, support, progress, and discovery remain attached." />
+                <ValueLine icon="trending-down" text={tr('Repeat-client fees can fall as low as 3%.')} />
+                <ValueLine icon="people" text={tr('Session history and rebooking stay organized per client.')} />
+                <ValueLine icon="shield-checkmark" text={tr('Payment records, support, progress, and discovery remain attached.')} />
               </View>
             </View>
 
             <View style={styles.sectionHead}>
-              <View><Txt variant="monoTag">RELATIONSHIPS</Txt><Txt style={styles.sectionTitle}>Clients worth keeping</Txt></View>
-              <Pressable onPress={() => router.push('/(trainer)/bookings')}><Txt style={styles.link}>All bookings</Txt></Pressable>
+              <View><Txt variant="monoTag">{tr('RELATIONSHIPS')}</Txt><Txt style={styles.sectionTitle}>{tr('Clients worth keeping')}</Txt></View>
+              <Pressable onPress={() => router.push('/(trainer)/bookings')}><Txt style={styles.link}>{tr('All bookings')}</Txt></Pressable>
             </View>
             {clients.length === 0 ? (
-              <Card><EmptyState icon="people-outline" title="Your client book starts here" subtitle="Completed sessions become organized client relationships with better repeat-client economics." /></Card>
+              <Card><EmptyState icon="people-outline" title={tr('Your client book starts here')} subtitle={tr('Completed sessions become organized client relationships with better repeat-client economics.')} /></Card>
             ) : (
               <Card padded={false}>
                 {clients.map(([clientId, sessions], index) => {
@@ -227,14 +229,14 @@ export default function TrainerBusinessHub() {
                         <Txt variant="bodyStrong">{person?.full_name ?? 'Client'}</Txt>
                         <Txt variant="caption" style={{ marginTop: 3 }}>{sessions.length} session{sessions.length === 1 ? '' : 's'} together · {dayjs(latest.scheduled_at ?? latest.created_at).format('MMM D')}</Txt>
                       </View>
-                      <View style={{ alignItems: 'flex-end', gap: 5 }}><Badge label={`${fee}% FEE`} tone={fee < tier.current.feePct ? 'success' : 'neutral'} /><Txt style={styles.rebook}>Follow up →</Txt></View>
+                      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 5 }}><Badge label={`${new Intl.NumberFormat(localeTag).format(fee)}٪ ${locale === 'ar' ? 'عمولة' : 'FEE'}`} tone={fee < tier.current.feePct ? 'success' : 'neutral'} /><Txt style={styles.rebook}>{tr('Follow up')} {isRTL ? '←' : '→'}</Txt></View>
                     </Pressable>
                   );
                 })}
               </Card>
             )}
 
-            <View style={styles.sectionHead}><View><Txt variant="monoTag">FORWARD VIEW</Txt><Txt style={styles.sectionTitle}>Next seven days</Txt></View></View>
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">{tr('FORWARD VIEW')}</Txt><Txt style={styles.sectionTitle}>{tr('Next seven days')}</Txt></View></View>
             <View style={styles.weekGrid}>
               {days.map((date, index) => {
                 const count = perDay[index];
@@ -247,12 +249,12 @@ export default function TrainerBusinessHub() {
                     style={({ pressed }) => [styles.agendaDay, count > 0 && styles.agendaDayOn, pressed && styles.pressed]}
                   >
                     <View style={styles.agendaDate}>
-                      <Txt style={[styles.agendaDayName, count > 0 && { color: colors.primary }]}>{date.format('ddd').toUpperCase()}</Txt>
-                      <Txt style={styles.agendaDayNumber}>{date.format('D')}</Txt>
+                      <Txt style={[styles.agendaDayName, count > 0 && { color: colors.primary }]}>{date.locale(locale).format('ddd').toUpperCase()}</Txt>
+                      <Txt style={styles.agendaDayNumber}>{new Intl.NumberFormat(localeTag).format(Number(date.format('D')))}</Txt>
                     </View>
                     <View style={{ flex: 1, minWidth: 0 }}>
-                      <Txt variant="bodyStrong" numberOfLines={1}>{count > 0 ? `${count} session${count === 1 ? '' : 's'}` : 'Open day'}</Txt>
-                      <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{firstSession ? `First at ${dayjs(firstSession.scheduled_at).format('h:mm A')}` : 'Add availability'}</Txt>
+                      <Txt variant="bodyStrong" numberOfLines={1}>{count > 0 ? locale === 'ar' ? `${new Intl.NumberFormat(localeTag).format(count)} جلسات` : `${count} session${count === 1 ? '' : 's'}` : tr('Open day')}</Txt>
+                      <Txt variant="caption" numberOfLines={1} style={{ marginTop: 3 }}>{firstSession ? locale === 'ar' ? `الأولى ${new Intl.DateTimeFormat(localeTag, { hour: 'numeric', minute: '2-digit' }).format(new Date(firstSession.scheduled_at!))}` : `First at ${dayjs(firstSession.scheduled_at).format('h:mm A')}` : tr('Add availability')}</Txt>
                     </View>
                     <Ionicons name={count > 0 ? 'checkmark-circle' : 'add-circle-outline'} size={18} color={count > 0 ? colors.success : colors.textDim} />
                   </Pressable>
@@ -260,7 +262,7 @@ export default function TrainerBusinessHub() {
               })}
             </View>
 
-            <View style={styles.sectionHead}><View><Txt variant="monoTag">EARNINGS TREND</Txt><Txt style={styles.sectionTitle}>{config.paymentsEnabled ? formatMoney(earnings) : 'Ready for live payments'}</Txt></View></View>
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">{tr('EARNINGS TREND')}</Txt><Txt style={styles.sectionTitle}>{config.paymentsEnabled ? formatMoney(earnings) : tr('Ready for live payments')}</Txt></View></View>
             <Card>
               <View style={styles.chart}>
                 {weekly.map((value, index) => (
@@ -272,20 +274,20 @@ export default function TrainerBusinessHub() {
               </View>
               <View style={styles.protectionRow}>
                 <Ionicons name={config.paymentsEnabled ? 'shield-checkmark' : 'business-outline'} size={16} color={config.paymentsEnabled ? colors.success : colors.primary} />
-                <Txt variant="caption" style={{ flex: 1 }}>{config.paymentsEnabled ? 'Paid, completed sessions are eligible for settlement.' : 'Your CR and Moyasar approval are the only missing steps before tracked bookings can become real payouts.'}</Txt>
+                <Txt variant="caption" style={{ flex: 1 }}>{tr(config.paymentsEnabled ? 'Paid, completed sessions are eligible for settlement.' : 'Your CR and Moyasar approval are the only missing steps before tracked bookings can become real payouts.')}</Txt>
               </View>
             </Card>
 
-            <View style={styles.sectionHead}><View><Txt variant="monoTag">SESSIONS</Txt><Txt style={styles.sectionTitle}>Coming up</Txt></View></View>
+            <View style={styles.sectionHead}><View><Txt variant="monoTag">{tr('SESSIONS')}</Txt><Txt style={styles.sectionTitle}>{tr('Coming up')}</Txt></View></View>
             <View style={{ gap: 10 }}>
               {upcoming.slice(0, 4).map((booking) => (
                 <Pressable key={booking.id} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: booking.id } })} style={styles.bookingCard}>
                   <View style={styles.bookingDate}><Txt style={styles.bookingDay}>{dayjs(booking.scheduled_at).format('DD')}</Txt><Txt style={styles.bookingMonth}>{dayjs(booking.scheduled_at).format('MMM').toUpperCase()}</Txt></View>
-                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">{counterparts[booking.client_id]?.full_name ?? 'Client session'}</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{dayjs(booking.scheduled_at).format('h:mm A')} · {booking.format === 'virtual' ? 'Virtual' : booking.city ?? 'In person'}</Txt></View>
-                  <Badge label={STATUS_LABEL[booking.status].toUpperCase()} tone={booking.status === 'in_progress' ? 'success' : 'brand'} />
+                  <View style={{ flex: 1 }}><Txt variant="bodyStrong">{counterparts[booking.client_id]?.full_name ?? tr('Client session')}</Txt><Txt variant="caption" style={{ marginTop: 3 }}>{new Intl.DateTimeFormat(localeTag, { hour: 'numeric', minute: '2-digit' }).format(new Date(booking.scheduled_at!))} · {booking.format === 'virtual' ? tr('Virtual') : booking.city ?? tr('In person')}</Txt></View>
+                  <Badge label={tr(STATUS_LABEL[booking.status]).toUpperCase()} tone={booking.status === 'in_progress' ? 'success' : 'brand'} />
                 </Pressable>
               ))}
-              {upcoming.length === 0 && <Card><EmptyState icon="calendar-outline" title="No sessions scheduled" subtitle="Publish openings or go online to make the next booking easy." actionLabel="Open schedule" onAction={() => router.push('/trainer-availability' as any)} /></Card>}
+              {upcoming.length === 0 && <Card><EmptyState icon="calendar-outline" title={tr('No sessions scheduled')} subtitle={tr('Publish openings or go online to make the next booking easy.')} actionLabel={tr('Open schedule')} onAction={() => router.push('/trainer-availability' as any)} /></Card>}
             </View>
           </>
         )}
@@ -315,6 +317,7 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 22, paddingTop: 14, paddingBottom: 34, gap: 14, width: '100%', maxWidth: 760, alignSelf: 'center' },
   header: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingBottom: 4 },
   title: { fontFamily: fonts.extrabold, fontSize: 31, lineHeight: 35, letterSpacing: -1.25, color: colors.textPrimary, marginTop: 6 },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
   commandCard: { minHeight: 210, borderRadius: radius.xxl, overflow: 'hidden', padding: 18, borderWidth: 1, borderColor: colors.primaryBorder },
   commandGlow: { position: 'absolute', width: 190, height: 190, borderRadius: 95, right: -90, top: -110, backgroundColor: colors.primaryTintStrong },
   onlineRow: { flexDirection: 'row', alignItems: 'center', gap: 11 },

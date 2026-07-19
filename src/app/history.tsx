@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
+import 'dayjs/locale/ar';
 import { colors, radius } from '@/theme';
 import { formatMoney } from '@/lib/config';
 import { useAuth } from '@/context/auth';
@@ -12,6 +13,7 @@ import { listTrainers } from '@/lib/api';
 import { isBackendConfigured } from '@/lib/supabase';
 import { Badge, Card, EmptyState, Txt } from '@/components/ui';
 import type { Booking, BookingStatus, Trainer } from '@/types/domain';
+import { useLocale } from '@/context/locale';
 
 const STATUS_TONE: Record<string, 'success' | 'brand' | 'neutral' | 'danger'> = {
   completed: 'success',
@@ -29,6 +31,7 @@ const PAST: Array<{ trainer: string; when: string; total: number; status: Bookin
 export default function History() {
   const router = useRouter();
   const { profile } = useAuth();
+  const { locale, localeTag, isRTL, tr } = useLocale();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [allTrainers, setAllTrainers] = useState<Trainer[]>([]);
   const [loaded, setLoaded] = useState(false);
@@ -37,26 +40,26 @@ export default function History() {
   useEffect(() => {
     Promise.all([listMyBookings(profile?.id ?? 'demo-client'), listTrainers()])
       .then(([b, t]) => { setBookings(b); setAllTrainers(t); })
-      .catch(() => setError('Could not load session history.'))
+      .catch(() => setError(tr('Could not load session history.')))
       .finally(() => setLoaded(true));
-  }, [profile?.id]);
+  }, [profile?.id, tr]);
 
-  const trainerName = (id: string) => allTrainers.find((t) => t.id === id)?.display_name ?? 'Trainer';
+  const trainerName = (id: string) => allTrainers.find((t) => t.id === id)?.display_name ?? tr('Trainer');
 
   return (
     <SafeAreaView style={styles.root} edges={['top']}>
-      <View style={styles.header}>
+      <View style={[styles.header, isRTL && styles.rtlRow]}>
         <Pressable onPress={() => router.back()} hitSlop={10}>
-          <Ionicons name="chevron-back" size={24} color={colors.textPrimary} />
+          <Ionicons name={isRTL ? 'chevron-forward' : 'chevron-back'} size={24} color={colors.textPrimary} />
         </Pressable>
-        <Txt variant="sectionTitle">Session history</Txt>
+        <Txt variant="sectionTitle">{tr('Session history')}</Txt>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ padding: 22, gap: 12 }} showsVerticalScrollIndicator={false}>
-        {error && <EmptyState icon="cloud-offline-outline" title="History unavailable" subtitle={error} />}
+        {error && <EmptyState icon="cloud-offline-outline" title={tr('History unavailable')} subtitle={error} />}
         {bookings.length > 0 && (
-          <Txt variant="label" style={{ marginBottom: 2 }}>This session</Txt>
+          <Txt variant="label" style={{ marginBottom: 2 }}>{tr('This session')}</Txt>
         )}
         {bookings.map((b) => (
           <Card key={b.id} onPress={() => router.push(`/session/${b.id}/track`)}>
@@ -65,22 +68,26 @@ export default function History() {
               when={b.scheduled_at ?? b.created_at}
               total={b.amount_due}
               status={b.status}
+              locale={locale}
+              localeTag={localeTag}
+              isRTL={isRTL}
+              tr={tr}
             />
           </Card>
         ))}
 
         {loaded && !error && isBackendConfigured && bookings.length === 0 && (
-          <EmptyState icon="time" title="No sessions yet"
-            subtitle="Book your first session and it will show up here."
-            actionLabel="Find a trainer" onAction={() => router.push('/(tabs)/discover')} />
+          <EmptyState icon="time" title={tr('No sessions yet')}
+            subtitle={tr('Book your first session and it will show up here.')}
+            actionLabel={tr('Find a trainer')} onAction={() => router.push('/(tabs)/discover')} />
         )}
 
         {!isBackendConfigured && (
           <>
-            <Txt variant="label" style={{ marginTop: bookings.length ? 14 : 0, marginBottom: 2 }}>Earlier</Txt>
+            <Txt variant="label" style={{ marginTop: bookings.length ? 14 : 0, marginBottom: 2 }}>{tr('Earlier')}</Txt>
             {PAST.map((p, i) => (
               <Card key={i}>
-                <Row name={p.trainer} when={p.when} total={p.total} status={p.status} />
+                <Row name={p.trainer} when={p.when} total={p.total} status={p.status} locale={locale} localeTag={localeTag} isRTL={isRTL} tr={tr} />
               </Card>
             ))}
           </>
@@ -90,17 +97,17 @@ export default function History() {
   );
 }
 
-function Row({ name, when, total, status }: { name: string; when: string; total: number; status: string }) {
+function Row({ name, when, total, status, locale, localeTag, isRTL, tr }: { name: string; when: string; total: number; status: string; locale: 'en' | 'ar'; localeTag: string; isRTL: boolean; tr: (value: string) => string }) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, isRTL && styles.rtlRow]}>
       <View style={styles.icon}><Ionicons name="barbell" size={18} color={colors.primary} /></View>
       <View style={{ flex: 1 }}>
         <Txt variant="bodyStrong">{name}</Txt>
-        <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(when).format('ddd, MMM D · h:mm A')}</Txt>
+        <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(when).locale(locale).format('ddd، D MMM')} · {new Intl.DateTimeFormat(localeTag, { hour: 'numeric', minute: '2-digit' }).format(new Date(when))}</Txt>
       </View>
-      <View style={{ alignItems: 'flex-end', gap: 5 }}>
+      <View style={{ alignItems: isRTL ? 'flex-start' : 'flex-end', gap: 5 }}>
         <Txt variant="bodyStrong">{formatMoney(total)}</Txt>
-        <Badge label={status.replace('_', ' ').toUpperCase()} tone={STATUS_TONE[status] ?? 'neutral'} />
+        <Badge label={tr(status).toUpperCase()} tone={STATUS_TONE[status] ?? 'neutral'} />
       </View>
     </View>
   );
@@ -111,4 +118,5 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 22, paddingTop: 8, paddingBottom: 8 },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   icon: { width: 40, height: 40, borderRadius: radius.sm, backgroundColor: colors.primaryTint, alignItems: 'center', justifyContent: 'center' },
+  rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
 });
