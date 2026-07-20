@@ -16,6 +16,10 @@ import type {
   Subscription,
   ProgressEntry,
   Workout,
+  TrainerClientRecord,
+  CoachNudge,
+  Challenge,
+  ChallengeMembership,
 } from './domain';
 
 type Table<Row> = {
@@ -66,6 +70,10 @@ export interface Database {
       progress_entries: Table<ProgressEntry>;
       workouts: Table<Workout>;
       referrals: Table<Referral>;
+      trainer_client_records: Table<TrainerClientRecord>;
+      coach_nudges: Table<CoachNudge>;
+      challenges: Table<Challenge>;
+      challenge_memberships: Table<ChallengeMembership>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

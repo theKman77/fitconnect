@@ -39,6 +39,15 @@ let smokeBrowser = null;
   await page.getByText('مهمة هذا الأسبوع', { exact: true }).waitFor();
   await page.getByText('الإنجازات', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-progress-ar.png'), fullPage: true });
+  await page.goto(`${baseUrl}/momentum`, { waitUntil: 'networkidle' });
+  await page.getByText('تدرّبوا معاً. وحافظوا على خصوصيتكم.', { exact: true }).waitFor();
+  await page.getByText('دائرة زخم الرياض', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-momentum-ar.png'), fullPage: true });
+  await page.goto(`${baseUrl}/trainer-clients`, { waitUntil: 'networkidle' });
+  await page.getByText('اعرف من يحتاجك قبل أن يختفي.', { exact: true }).waitFor();
+  await page.getByText('Lina A.', { exact: true }).first().click();
+  await page.getByText('درّب العلاقة أيضاً', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-retention-studio-ar.png'), fullPage: true });
   await page.goto(`${baseUrl}/discover`, { waitUntil: 'networkidle' });
   await page.getByText('اعثر على مدربك.', { exact: true }).waitFor();
   await page.getByText('المدربون الأنسب لك', { exact: true }).waitFor();
@@ -114,6 +123,11 @@ let smokeBrowser = null;
   await page.getByLabel('Next two weeks').click();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-schedule.png'), fullPage: true });
 
+  await page.goto(`${baseUrl}/momentum`, { waitUntil: 'networkidle' });
+  await page.getByText('Train together. Keep your privacy.', { exact: true }).waitFor();
+  await page.getByText('Riyadh Momentum Circle', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-momentum.png'), fullPage: true });
+
   await page.goto(`${baseUrl}/session/00000000-0000-4000-8000-000000000000/rate?preview=1`, { waitUntil: 'networkidle' });
   await page.getByText('You showed up.', { exact: true }).waitFor();
   await page.getByText('SESSION COMPLETE', { exact: true }).waitFor();
@@ -125,7 +139,7 @@ let smokeBrowser = null;
 
   const serious = errors.filter((e) => !e.includes('favicon') && !e.includes('net::ERR_ABORTED') && !(smokeServer && e.includes('net::ERR_NETWORK_ACCESS_DENIED')));
   if (serious.length) throw new Error(`Browser errors: ${serious.join(' | ')}; responses: ${badResponses.join(' | ')}`);
-  console.log(JSON.stringify({ ok: true, trainerDataAvailable, pages: ['welcome', 'welcome-ar', 'schedule-ar', 'progress-ar', 'discover-ar', 'sign-up', 'celebration-ar', 'discover', ...(trainerDataAvailable ? ['trainer', 'booking'] : []), 'payments', 'integrations', 'trainer-availability', 'celebration', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-welcome-ar.png'), path.join(os.tmpdir(), 'fitconnect-schedule-ar.png'), path.join(os.tmpdir(), 'fitconnect-progress-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover-ar.png'), path.join(os.tmpdir(), 'fitconnect-celebration-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), ...(trainerDataAvailable ? [path.join(os.tmpdir(), 'fitconnect-trainer.png')] : []), path.join(os.tmpdir(), 'fitconnect-schedule.png'), path.join(os.tmpdir(), 'fitconnect-celebration.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
+  console.log(JSON.stringify({ ok: true, trainerDataAvailable, pages: ['welcome', 'welcome-ar', 'schedule-ar', 'progress-ar', 'momentum-ar', 'retention-studio-ar', 'discover-ar', 'sign-up', 'celebration-ar', 'discover', ...(trainerDataAvailable ? ['trainer', 'booking'] : []), 'payments', 'integrations', 'trainer-availability', 'momentum', 'celebration', 'reset-password'], screenshots: [path.join(os.tmpdir(), 'fitconnect-welcome.png'), path.join(os.tmpdir(), 'fitconnect-welcome-ar.png'), path.join(os.tmpdir(), 'fitconnect-schedule-ar.png'), path.join(os.tmpdir(), 'fitconnect-progress-ar.png'), path.join(os.tmpdir(), 'fitconnect-momentum-ar.png'), path.join(os.tmpdir(), 'fitconnect-retention-studio-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover-ar.png'), path.join(os.tmpdir(), 'fitconnect-celebration-ar.png'), path.join(os.tmpdir(), 'fitconnect-discover.png'), ...(trainerDataAvailable ? [path.join(os.tmpdir(), 'fitconnect-trainer.png')] : []), path.join(os.tmpdir(), 'fitconnect-schedule.png'), path.join(os.tmpdir(), 'fitconnect-momentum.png'), path.join(os.tmpdir(), 'fitconnect-celebration.png'), path.join(os.tmpdir(), 'fitconnect-smoke.png')] }));
   await smokeBrowser.close();
   smokeServer?.kill();
 })().catch(async (e) => {

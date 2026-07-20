@@ -16,6 +16,8 @@ import { computeXP, levelFromXP, ACHIEVEMENTS, ClientStats } from '@/lib/gamific
 import { Card, EmptyState, InputSheet, Txt } from '@/components/ui';
 import type { Booking, PersonalRecord, ProgressEntry, Trainer } from '@/types/domain';
 import { useLocale } from '@/context/locale';
+import { listChallenges, listMyChallengeMemberships } from '@/lib/retention';
+import type { Challenge, ChallengeMembership } from '@/types/domain';
 
 // Demo-mode showcase stats (kept for the demo profile / Expo Go without backend).
 const DEMO_STATS: ClientStats = { sessions: 24, streakWeeks: 5, prCount: 3, reviewsGiven: 6, weightLogs: 6 };
@@ -38,7 +40,7 @@ const DEMO_WORKOUTS_AR = [
 export default function Progress() {
   const router = useRouter();
   const { profile, updateProfile } = useAuth();
-  const { locale, localeTag, isRTL, t } = useLocale();
+  const { locale, localeTag, isRTL, t, tr } = useLocale();
   const [weights, setWeights] = useState<ProgressEntry[]>([]);
   const [prs, setPRs] = useState<PersonalRecord[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -48,6 +50,8 @@ export default function Progress() {
   const [sheet, setSheet] = useState<'weight' | 'pr' | 'goal' | null>(null);
   const [reviewsGiven, setReviewsGiven] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [memberships, setMemberships] = useState<ChallengeMembership[]>([]);
 
   const clientId = profile?.id ?? 'demo-client';
   const useLiveData = isBackendConfigured && !!profile;
@@ -59,24 +63,30 @@ export default function Progress() {
       setBookings([]);
       setAllTrainers([]);
       setReviewsGiven(0);
+      setChallenges(await listChallenges(true));
+      setMemberships(await listMyChallengeMemberships('demo-client'));
       setError(null);
       setLoaded(true);
       return;
     }
     try {
       setError(null);
-      const [w, p, b, t, reviewCount] = await Promise.all([
+      const [w, p, b, t, reviewCount, nextChallenges, nextMemberships] = await Promise.all([
         listWeights(clientId),
         listPRs(clientId),
         listMyBookings(clientId),
         listTrainers(),
         countReviewsGiven(clientId),
+        listChallenges(),
+        listMyChallengeMemberships(clientId),
       ]);
       setWeights(w);
       setPRs(p);
       setBookings(b);
       setAllTrainers(t);
       setReviewsGiven(reviewCount);
+      setChallenges(nextChallenges);
+      setMemberships(nextMemberships);
     } catch (e: any) {
       setError(e?.message ?? t('progress.unavailable'));
     } finally {
@@ -97,7 +107,11 @@ export default function Progress() {
         weightLogs: weights.length,
       }
     : DEMO_STATS;
-  const level = levelFromXP(computeXP(stats));
+  const challengeXP = memberships.reduce((sum, membership) => {
+    const challenge = challenges.find((item) => item.id === membership.challenge_id);
+    return sum + (challenge && membership.progress >= challenge.target ? challenge.reward_xp : 0);
+  }, 0);
+  const level = levelFromXP(computeXP(stats) + challengeXP);
   const earnedCount = ACHIEVEMENTS.filter((a) => a.earned(stats)).length;
 
   const weightVals = weights.map((w) => w.weight ?? 0).filter(Boolean);
@@ -186,6 +200,22 @@ export default function Progress() {
             <View style={[styles.missionBottom, rtlRow]}>
               <Txt style={styles.missionMeta}>{number(Math.min(sessionsThisWeek, missionTarget))} {t('progress.ofSessions')}</Txt>
               <Txt style={styles.missionLink}>{sessionsThisWeek >= missionTarget ? t('progress.exploreGoal') : t('progress.bookSession')} {isRTL ? '←' : '→'}</Txt>
+            </View>
+          </Pressable>
+        </View>
+
+        <View style={styles.section}>
+          <Pressable style={styles.circleCard} onPress={() => router.push('/momentum' as any)}>
+            <LinearGradient colors={['#34180F', colors.surfaceElevated, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+            <View style={[styles.circleTop, rtlRow]}>
+              <View style={styles.circleIcon}><Ionicons name="people" size={20} color={colors.white} /></View>
+              <View style={{ flex: 1 }}><Txt style={styles.circleEyebrow}>{tr('MOMENTUM CIRCLES')}</Txt><Txt style={styles.circleTitle}>{tr('Progress feels lighter together.')}</Txt></View>
+              <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={20} color={colors.primary} />
+            </View>
+            <Txt variant="body" style={{ marginTop: 10 }}>{tr('Join privacy-first challenges where only verified FitConnect sessions count—never weight or body metrics.')}</Txt>
+            <View style={[styles.circleProof, rtlRow]}>
+              <View style={styles.circleFaces}><View style={[styles.miniFace, { backgroundColor: '#5430D8' }]} /><View style={[styles.miniFace, { backgroundColor: '#C44676', marginLeft: -7 }]} /><View style={[styles.miniFace, { backgroundColor: '#247A72', marginLeft: -7 }]} /></View>
+              <Txt style={styles.circleProofText}>{tr('Small circles · aliases · verified effort')}</Txt>
             </View>
           </Pressable>
         </View>
@@ -451,6 +481,15 @@ const styles = StyleSheet.create({
   missionBottom: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 9 },
   missionMeta: { fontFamily: fonts.medium, fontSize: 10, color: colors.textDim },
   missionLink: { fontFamily: fonts.bold, fontSize: 11, color: colors.primary },
+  circleCard: { overflow: 'hidden', borderRadius: radius.xxl, borderWidth: 1, borderColor: colors.primaryBorder, padding: 17 },
+  circleTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  circleIcon: { width: 43, height: 43, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  circleEyebrow: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 1, color: colors.primary },
+  circleTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.textPrimary, marginTop: 3 },
+  circleProof: { flexDirection: 'row', alignItems: 'center', gap: 9, marginTop: 15 },
+  circleFaces: { flexDirection: 'row', alignItems: 'center' },
+  miniFace: { width: 23, height: 23, borderRadius: 12, borderWidth: 2, borderColor: colors.surface },
+  circleProofText: { fontFamily: fonts.semibold, fontSize: 10, color: colors.textMuted },
 
   badge: { width: 92, borderRadius: radius.lg, borderWidth: 1, padding: 12, alignItems: 'center', gap: 8, minHeight: 84 },
   badgeOn: { backgroundColor: colors.primaryTint, borderColor: colors.primaryBorder },

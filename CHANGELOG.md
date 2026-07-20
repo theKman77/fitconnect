@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-07-20 — Retention Studio and Momentum Circles
+
+### Trainer-owned relationship value
+
+- Added a private Retention Studio that turns completed bookings into a usable client relationship workspace: attention signals, goals, private coaching notes, tags, follow-up dates, relationship status, repeat-client economics, and suggested next actions.
+- Added targeted coach prompts for rebooking, check-ins, and celebrations. Prompts are persisted for real accounts and surface in the client Home feed; the logged-out showcase remains fully interactive without writing fake records to production.
+- Kept private notes trainer-only with booking-relationship checks at both the database and UI layers. The product explicitly discourages diagnoses and unnecessary sensitive data.
+
+### Privacy-first social motivation
+
+- Added bilingual Momentum Circles and personal missions driven only by verified completed FitConnect sessions.
+- Added opt-in aliases, private membership records, member-only standings, XP rewards, progress bars, and challenge completion updates from server-side booking transitions.
+- Deliberately excluded public weight/calorie rankings, progress photos, locations, failure states, and open group chat.
+
+### Backend and verification
+
+- Added RLS-protected `trainer_client_records`, `coach_nudges`, `challenges`, and `challenge_memberships`, plus guarded join/respond/leaderboard functions and performance indexes.
+- Applied and transaction-tested both positive and negative role boundaries in the connected Supabase project.
+- Expanded the bilingual browser walkthrough to cover Momentum Circles and the Arabic Retention Studio.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export passes.
+- The phone-sized bilingual browser walkthrough passes 20 routes/states with no serious browser errors.
+
 ## 2026-07-19 — Complete Arabic operational journey
 
 - Localized the realtime client session screen, including trainer arrival states, safety guidance, protected chat, Saudi emergency calling, location-sharing readiness, and post-session rating access.

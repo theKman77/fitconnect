@@ -89,6 +89,11 @@ export default function TrainerBusinessHub() {
   const clients = [...byClient.entries()].sort((a, b) => b[1].length - a[1].length).slice(0, 5);
   const repeatClients = clients.filter(([, sessions]) => sessions.length > 1).length;
   const repeatRate = clients.length ? Math.round((repeatClients / clients.length) * 100) : 0;
+  const attentionClients = clients.filter(([clientId, sessions]) => {
+    const latest = [...sessions].sort((a, b) => (b.scheduled_at ?? b.created_at).localeCompare(a.scheduled_at ?? a.created_at))[0];
+    const hasUpcoming = upcoming.some((booking) => booking.client_id === clientId);
+    return !hasUpcoming && dayjs().diff(dayjs(latest.scheduled_at ?? latest.created_at), 'day') >= 21;
+  }).length;
 
   const weeks = Array.from({ length: 6 }, (_, index) => dayjs().startOf('week').subtract(5 - index, 'week'));
   const weekly = weeks.map((week) => paidCompleted
@@ -170,6 +175,7 @@ export default function TrainerBusinessHub() {
               <QuickAction icon="calendar" label={tr('Schedule')} meta={`${new Intl.NumberFormat(localeTag).format(bookedDays)}/٧ ${tr('active days')}`} onPress={() => router.push('/trainer-availability' as any)} />
               <QuickAction icon="sparkles" label={tr('Public profile')} meta={`${new Intl.NumberFormat(localeTag).format(profileStrength)}٪ ${tr('complete')}`} onPress={() => trainer ? router.push(`/trainer/${trainer.id}`) : router.push('/trainer-edit' as any)} />
               <QuickAction icon="create-outline" label={tr('Edit offer')} meta={`${tr('From')} ${formatMoney(trainer?.base_price ?? 0)}`} onPress={() => router.push('/trainer-edit' as any)} />
+              <QuickAction icon="heart-circle-outline" label={tr('Retention studio')} meta={attentionClients ? locale === 'ar' ? `${new Intl.NumberFormat(localeTag).format(attentionClients)} تحتاج متابعة` : `${attentionClients} need attention` : tr('Clients on track')} onPress={() => router.push('/trainer-clients' as any)} />
             </View>
 
             <View style={styles.sectionHead}>
@@ -223,7 +229,7 @@ export default function TrainerBusinessHub() {
                   const fee = repeatClientFeePct(sessions.length, tier.current.feePct);
                   const latest = [...sessions].sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
                   return (
-                    <Pressable key={clientId} onPress={() => router.push({ pathname: '/trainer-session/[id]', params: { id: latest.id } })} style={[styles.clientRow, index < clients.length - 1 && styles.rowBorder]}>
+                    <Pressable key={clientId} onPress={() => router.push(`/trainer-client/${clientId}` as any)} style={[styles.clientRow, index < clients.length - 1 && styles.rowBorder]}>
                       <Avatar uri={person?.avatar_url} name={person?.full_name ?? 'Client'} size={44} />
                       <View style={{ flex: 1 }}>
                         <Txt variant="bodyStrong">{person?.full_name ?? 'Client'}</Txt>
@@ -331,8 +337,8 @@ const styles = StyleSheet.create({
   timePeriod: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 0.8, color: 'rgba(255,255,255,0.78)' },
   emptyNextIcon: { width: 54, height: 54, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
   reviewBanner: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: radius.xl, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder, padding: 15 },
-  quickGrid: { flexDirection: 'row', gap: 9 },
-  quickAction: { flex: 1, minWidth: 0, minHeight: 112, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, padding: 13 },
+  quickGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 9 },
+  quickAction: { flexGrow: 1, flexBasis: '46%', minWidth: 0, minHeight: 106, borderRadius: radius.xl, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.borderSubtle, padding: 13 },
   quickIcon: { width: 36, height: 36, borderRadius: 13, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
   quickLabel: { fontFamily: fonts.bold, fontSize: 12, color: colors.textPrimary, marginTop: 12 },
   quickMeta: { fontFamily: fonts.regular, fontSize: 9, color: colors.textDim, marginTop: 3 },

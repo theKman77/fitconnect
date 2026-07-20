@@ -10,9 +10,10 @@ import { useBooking } from '@/context/booking';
 import { listTrainers, getTrainer } from '@/lib/api';
 import { isBackendConfigured } from '@/lib/supabase';
 import { listFavoriteIds, onFavoritesChange } from '@/lib/favorites';
+import { listMyCoachNudges, respondToCoachNudge } from '@/lib/retention';
 import { Avatar, Brand, TrainerRowSkeleton, Txt } from '@/components/ui';
 import { TrainerCard } from '@/components/TrainerCard';
-import type { Trainer } from '@/types/domain';
+import type { CoachNudge, Trainer } from '@/types/domain';
 import { useLocale } from '@/context/locale';
 
 export default function Home() {
@@ -21,17 +22,19 @@ export default function Home() {
   const wide = width >= 900;
   const { profile } = useAuth();
   const { start } = useBooking();
-  const { isRTL, t } = useLocale();
+  const { isRTL, tr, t } = useLocale();
   const [trainers, setTrainers] = useState<Trainer[]>([]);
   const [loading, setLoading] = useState(true);
   const [favoriteIds, setFavoriteIds] = useState<string[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [nudges, setNudges] = useState<CoachNudge[]>([]);
 
   useEffect(() => {
     listTrainers().then((rows) => { setTrainers(rows); setLoading(false); }).catch(() => { setError(t('home.loadError')); setLoading(false); });
     const load = () => listFavoriteIds(profile?.id ?? 'demo-client').then(setFavoriteIds);
     load();
+    listMyCoachNudges(profile?.id ?? 'demo-client').then(setNudges).catch(() => {});
     return onFavoritesChange(load);
   }, [profile?.id, t]);
 
@@ -41,6 +44,7 @@ export default function Home() {
       setError(null);
       setTrainers(await listTrainers());
       setFavoriteIds(await listFavoriteIds(profile?.id ?? 'demo-client'));
+      setNudges(await listMyCoachNudges(profile?.id ?? 'demo-client'));
     } catch {
       setError(t('home.refreshError'));
     } finally {
@@ -53,13 +57,15 @@ export default function Home() {
   const greeting = hour < 12 ? t('home.morning') : hour < 18 ? t('home.afternoon') : t('home.evening');
   const rtlRow = isRTL ? styles.rtlRow : undefined;
   const favorite = trainers.find((t) => favoriteIds.includes(t.id)) ?? trainers[0];
+  const coachNudge = nudges.find((item) => item.status === 'sent' || item.status === 'seen');
   const topRated = [...trainers].sort((a, b) => b.rating - a.rating).slice(0, wide ? 4 : 6);
   const open = (id: string) => router.push(`/trainer/${id}`);
 
-  async function quickBook() {
-    if (!favorite) return;
+  async function quickBook(trainerId?: string) {
+    const target = trainerId ? trainers.find((trainer) => trainer.id === trainerId) : favorite;
+    if (!target) return;
     try {
-      const detail = await getTrainer(favorite.id);
+      const detail = await getTrainer(target.id);
       if (!detail) return;
       const plans = detail.session_types.filter((p) => p.active && p.kind !== 'subscription');
       start(detail, plans, plans.find((p) => p.popular) ?? plans[0]);
@@ -67,6 +73,14 @@ export default function Home() {
     } catch {
       setError(t('home.openError'));
     }
+  }
+
+  async function actOnNudge() {
+    if (!coachNudge) return;
+    await respondToCoachNudge(coachNudge.id, 'acted').catch(() => {});
+    setNudges((current) => current.map((item) => item.id === coachNudge.id ? { ...item, status: 'acted' } : item));
+    if (coachNudge.kind === 'rebook') await quickBook(coachNudge.trainer_id);
+    else router.push((coachNudge.kind === 'celebrate' ? '/momentum' : '/(tabs)/progress') as any);
   }
 
   return (
@@ -116,6 +130,19 @@ export default function Home() {
           {error && <View style={[styles.error, rtlRow]}><Ionicons name="cloud-offline-outline" size={18} color={colors.danger} /><Txt variant="caption" style={{ flex: 1 }}>{error}</Txt></View>}
           {isBackendConfigured && trainers.length === 0 && !loading && <View style={[styles.error, rtlRow]}><Ionicons name="people-outline" size={18} color={colors.primary} /><Txt variant="caption">{t('home.noTrainers')}</Txt></View>}
 
+          {coachNudge && (
+            <Pressable style={styles.coachNudge} onPress={actOnNudge}>
+              <LinearGradient colors={['#3A1A10', colors.surfaceElevated, colors.surface]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+              <View style={[styles.coachNudgeTop, rtlRow]}>
+                <View style={styles.coachNudgeIcon}><Ionicons name={coachNudge.kind === 'rebook' ? 'repeat' : coachNudge.kind === 'celebrate' ? 'trophy' : 'chatbubble-ellipses'} size={19} color={colors.white} /></View>
+                <View style={{ flex: 1 }}><Txt style={styles.coachNudgeKicker}>{tr('FROM YOUR COACH')}</Txt><Txt style={styles.coachNudgeTitle}>{coachNudge.title}</Txt></View>
+                <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={19} color={colors.primary} />
+              </View>
+              <Txt variant="body" style={{ marginTop: 9 }}>{coachNudge.body}</Txt>
+              <Txt style={styles.coachNudgeAction}>{tr(coachNudge.kind === 'rebook' ? 'See available times' : coachNudge.kind === 'celebrate' ? 'Open my momentum' : 'Review my progress')}</Txt>
+            </Pressable>
+          )}
+
           {favorite && (
             <Pressable style={[styles.rebook, rtlRow]} onPress={() => open(favorite.id)}>
               <LinearGradient colors={[colors.surfaceHigh, colors.surface, '#16100E']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
@@ -124,7 +151,7 @@ export default function Home() {
                 <Txt style={styles.rebookTitle}>{favorite.display_name}</Txt>
                 <Txt style={styles.rebookMeta}>{favorite.headline}</Txt>
               </View>
-              <Pressable style={styles.rebookButton} onPress={quickBook}>
+              <Pressable style={styles.rebookButton} onPress={() => quickBook()}>
                 <Txt style={styles.rebookButtonText}>{t('home.book')}</Txt>
                 <Ionicons name={isRTL ? 'arrow-back' : 'arrow-forward'} size={16} color={colors.white} />
               </Pressable>
@@ -203,6 +230,12 @@ const styles = StyleSheet.create({
   quickLabel: { fontFamily: fonts.bold, fontSize: 13, color: colors.textPrimary },
   quickMeta: { fontFamily: fonts.regular, fontSize: 10, color: colors.textDim, marginTop: 3 },
   error: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 14, padding: 13, borderRadius: radius.lg, backgroundColor: colors.surface },
+  coachNudge: { overflow: 'hidden', marginTop: 18, padding: 16, borderRadius: radius.xxl, borderWidth: 1, borderColor: colors.primaryBorder },
+  coachNudgeTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  coachNudgeIcon: { width: 42, height: 42, borderRadius: 15, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  coachNudgeKicker: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 1, color: colors.primary },
+  coachNudgeTitle: { fontFamily: fonts.bold, fontSize: 17, color: colors.textPrimary, marginTop: 3 },
+  coachNudgeAction: { alignSelf: 'flex-start', fontFamily: fonts.bold, fontSize: 11, color: colors.primary, marginTop: 12 },
   rebook: { minHeight: 110, overflow: 'hidden', flexDirection: 'row', alignItems: 'center', gap: 14, marginTop: 24, padding: 18, borderRadius: radius.xxl, borderWidth: StyleSheet.hairlineWidth, borderColor: colors.primaryBorder },
   rebookCopy: { flex: 1 },
   rebookEyebrow: { fontFamily: fonts.monoBold, fontSize: 9, letterSpacing: 1.2, color: colors.primary },

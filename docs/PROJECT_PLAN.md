@@ -1,8 +1,8 @@
 # FitConnect — Build Plan
 
-## Current release reality — 2026-07-19
+## Current release reality — 2026-07-20
 
-The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL now covers the complete acquisition, booking, account, trainer-operations, live-session, and post-session journeys. The next product wave focuses on deeper trainer CRM tools and challenge-based social retention.
+The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, a private Retention Studio, privacy-first Momentum Circles, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL covers the complete acquisition, booking, account, trainer-operations, retention, live-session, and post-session journeys.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 
@@ -112,9 +112,14 @@ from the approved design, with a real backend and test-mode payments.
       ARPU/LTV/IAP research, disintermediation strategy).
 - [x] **Post-session celebration:** animated completion payoff, XP, weekly
       mission progress, trainer rating tags, private progress photo, and coach note.
-- [ ] **Next engagement wave (concepted in report):** challenges, squads and
-      leaderboards, plus deeper trainer CRM notes, rebook prompts, and partner-gym
-      perk fulfillment.
+- [x] **Retention Studio:** private goals/notes/tags, relationship attention
+      signals, follow-up dates, repeat-client economics, and persisted coach
+      rebook/check-in/celebration prompts.
+- [x] **Momentum Circles:** opt-in aliases, member-only standings, verified-session
+      progress, personal missions, and XP rewards without public body metrics.
+- [ ] **Next retention wave:** automated challenge season rollover, alias
+      moderation, prompt notifications, waitlists/last-minute slot drops, recurring
+      programs, and partner-gym perk fulfillment.
 
 ## What needs YOU (owner-only steps) — see docs/SETUP.md
 1. Create a free Supabase project → paste URL + anon key into `.env`

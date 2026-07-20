@@ -11,6 +11,8 @@ interface Field {
   placeholder?: string;
   keyboardType?: 'default' | 'numeric' | 'decimal-pad';
   initial?: string;
+  multiline?: boolean;
+  maxLength?: number;
 }
 
 interface Props {
@@ -62,7 +64,10 @@ export function InputSheet({ visible, title, fields, submitLabel, onSubmit, onCl
                   placeholder={f.placeholder}
                   placeholderTextColor={colors.textDim}
                   keyboardType={f.keyboardType ?? 'default'}
-                  style={[styles.input, isRTL && styles.inputRTL]}
+                  multiline={f.multiline}
+                  maxLength={f.maxLength}
+                  textAlignVertical={f.multiline ? 'top' : 'center'}
+                  style={[styles.input, f.multiline && styles.multiline, isRTL && styles.inputRTL]}
                 />
               </View>
             </View>
@@ -89,5 +94,6 @@ const styles = StyleSheet.create({
   },
   inputWrap: { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 14 },
   input: { color: colors.textPrimary, fontFamily: fonts.regular, fontSize: 16, paddingVertical: 13 },
+  multiline: { minHeight: 110 },
   inputRTL: { fontFamily: undefined, textAlign: 'right', writingDirection: 'rtl' },
 });

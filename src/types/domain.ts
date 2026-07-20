@@ -214,6 +214,70 @@ export interface Workout {
   performed_at: string;
 }
 
+export type RelationshipStatus = 'active' | 'attention' | 'paused';
+export type CoachNudgeKind = 'rebook' | 'check_in' | 'celebrate';
+export type CoachNudgeStatus = 'sent' | 'seen' | 'dismissed' | 'acted';
+
+export interface TrainerClientRecord {
+  trainer_id: string;
+  client_id: string;
+  goal_summary: string | null;
+  private_notes: string | null;
+  tags: string[];
+  relationship_status: RelationshipStatus;
+  next_follow_up_at: string | null;
+  last_contacted_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CoachNudge {
+  id: string;
+  trainer_id: string;
+  client_id: string;
+  kind: CoachNudgeKind;
+  title: string;
+  body: string;
+  status: CoachNudgeStatus;
+  created_at: string;
+  seen_at: string | null;
+}
+
+export interface Challenge {
+  id: string;
+  slug: string;
+  title: string;
+  title_ar: string;
+  description: string;
+  description_ar: string;
+  kind: 'solo' | 'circle';
+  metric: 'verified_sessions';
+  target: number;
+  reward_xp: number;
+  starts_at: string;
+  ends_at: string;
+  max_members: number | null;
+  active: boolean;
+  created_at: string;
+}
+
+export interface ChallengeMembership {
+  challenge_id: string;
+  client_id: string;
+  display_alias: string;
+  progress: number;
+  joined_at: string;
+  completed_at: string | null;
+}
+
+export interface ChallengeLeaderboardEntry {
+  position: number;
+  display_alias: string;
+  progress: number;
+  target: number;
+  is_me: boolean;
+}
+
 /** A trainer joined with their session types + reviews, for profile screens. */
 export interface TrainerDetail extends Trainer {
   session_types: SessionType[];
