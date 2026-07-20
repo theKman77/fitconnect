@@ -19,6 +19,8 @@ The current security sequence after the original numbered migrations is:
 - `20260718211046_restore_showcase_trainers.sql`
 - `20260720160534_retention_and_momentum.sql`
 - `20260720162056_retention_index_hardening.sql`
+- `20260720172618_demand_engine.sql`
+- `20260720174803_demand_engine_hardening.sql`
 
 These are already applied to the connected production project.
 
@@ -35,6 +37,8 @@ These are already applied to the connected production project.
 - Coach prompts require an existing trainer/client booking relationship. Trainers can send/read their prompts; clients can read and respond only to prompts addressed to them.
 - Challenge membership is opt-in and private. Members can read only their own membership row; the guarded leaderboard RPC exposes aliases and verified-session progress only to challenge members.
 - Challenge progress is updated by the server when a booking moves to `completed`; clients cannot award themselves progress or XP.
+- Waitlist rows and private match rows are client-only. Trainers receive aggregate demand and match counts, never names, phone numbers, or profile IDs as a lead list.
+- Pulse Drops can promote only the owning approved trainer's real, unbooked availability inside 72 hours. A normal guarded booking claims the slot and closes competing matches.
 
 The public SECURITY DEFINER RPC warnings from the Supabase advisor are expected for guarded multi-table workflows. Each uses `auth.uid()`, strict ownership/transition checks, and an empty `search_path`. Do not bypass their validation merely to silence a heuristic warning.
 

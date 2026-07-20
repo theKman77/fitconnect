@@ -1,5 +1,19 @@
 # Changelog
 
+## 2026-07-20 — Demand Engine, repeat booking, and brand exports
+
+- Added one-tap repeat booking that preserves the previous plan, format, equipment, and location, then selects the next real opening or offers a private waitlist.
+- Added bilingual Pulse Drops for real trainer openings in the next 72 hours, with clear expiry, protected-booking handoff, and logged-out showcase inventory.
+- Added private trainer waitlists with day, daypart, format, and plan preferences. Trainers receive only aggregate demand and match counts—not client names, contact details, or lead lists.
+- Added trainer-side slot broadcasting and closing, automatic private matching, claimed-slot cleanup, and demand summaries.
+- Added RLS-protected demand tables and guarded RPCs, transaction-tested cross-client and cross-trainer isolation, an indexed session-plan relationship, and consolidated broadcast visibility policy.
+- Exported production-size brand assets: a 4096px transparent mark and a 4096px dark lockup.
+
+### Verification
+
+- `npx tsc --noEmit` passes.
+- Expo SDK 54 web export and bilingual browser walkthrough cover the new demand surfaces.
+
 ## 2026-07-20 — Retention Studio and Momentum Circles
 
 ### Trainer-owned relationship value

@@ -2,7 +2,9 @@
 
 ## Current release reality — 2026-07-20
 
-The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, a private Retention Studio, privacy-first Momentum Circles, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL covers the complete acquisition, booking, account, trainer-operations, retention, live-session, and post-session journeys.
+The current milestone also adds one-tap repeat booking, private trainer waitlists, and 72-hour Pulse Drops. These surfaces are bilingual/RTL and use real protected inventory while exposing only aggregate demand to trainers.
+
+The FitConnect 2.0 visual milestone now includes The Handoff identity, a bilingual client marketplace, goal-led Discover, a proof-led trainer profile, a complete booking shell, a shared two-week scheduling calendar with grouped time openings, a trainer Business Hub, a private Retention Studio, privacy-first Momentum Circles, one-tap repeat booking, private trainer waitlists, 72-hour Pulse Drops, an animated post-session payoff, refined global surfaces/navigation, a more engaging weekly Progress mission, and a dedicated Integrations Hub. Arabic/RTL covers the complete acquisition, booking, account, trainer-operations, retention, live-session, and post-session journeys.
 
 The post-audit hardening milestone supersedes stale checklist text below. RLS, storage, Edge Functions, booking integrity, server-side fee/payout math, review aggregates, trainer availability, trainer application gating, password recovery, and cross-app error/empty states are implemented and live. Checkout is a real database reservation but explicitly **unpaid simulation** until Moyasar approves the business. See `CHANGELOG.md` and `docs/SUPABASE.md` for exact behavior.
 

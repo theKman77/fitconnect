@@ -1,6 +1,7 @@
 import type { AppLocale } from '@/context/locale';
 
 const ARABIC: Record<string, string> = {
+  Riyadh: 'الرياض',
   'Strength & conditioning coach': 'مدربة قوة ولياقة بدنية',
   'HIIT & boxing': 'تمارين عالية الشدة وملاكمة',
   'Yoga & mobility': 'يوغا وتحسين الحركة',

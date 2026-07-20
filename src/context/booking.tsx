@@ -30,7 +30,7 @@ export interface PriceBreakdown {
 interface BookingValue {
   draft: BookingDraft;
   update: (patch: Partial<BookingDraft>) => void;
-  start: (trainer: Trainer, plans: SessionType[], sessionType?: SessionType) => void;
+  start: (trainer: Trainer, plans: SessionType[], sessionType?: SessionType, prefill?: Partial<BookingDraft>) => void;
   reset: () => void;
   price: PriceBreakdown;
 }
@@ -56,8 +56,8 @@ export function BookingProvider({ children }: { children: ReactNode }) {
     setDraft((d) => ({ ...d, ...patch }));
   }, []);
 
-  const start = useCallback((trainer: Trainer, plans: SessionType[], sessionType?: SessionType) => {
-    setDraft({ ...initial, trainer, plans, sessionType });
+  const start = useCallback((trainer: Trainer, plans: SessionType[], sessionType?: SessionType, prefill: Partial<BookingDraft> = {}) => {
+    setDraft({ ...initial, ...prefill, trainer, plans, sessionType });
   }, []);
 
   const reset = useCallback(() => setDraft(initial), []);

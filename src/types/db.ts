@@ -20,6 +20,9 @@ import type {
   CoachNudge,
   Challenge,
   ChallengeMembership,
+  WaitlistRequest,
+  SlotBroadcast,
+  WaitlistMatch,
 } from './domain';
 
 type Table<Row> = {
@@ -74,6 +77,9 @@ export interface Database {
       coach_nudges: Table<CoachNudge>;
       challenges: Table<Challenge>;
       challenge_memberships: Table<ChallengeMembership>;
+      waitlist_requests: Table<WaitlistRequest>;
+      slot_broadcasts: Table<SlotBroadcast>;
+      waitlist_matches: Table<WaitlistMatch>;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

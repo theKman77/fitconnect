@@ -122,7 +122,7 @@ export default function Home() {
           </Pressable>
 
           <View style={[styles.quickRow, rtlRow]}>
-            <QuickAction icon="flash" label={t('home.bookNow')} meta={t('home.availableToday')} onPress={() => router.push('/(tabs)/discover')} featured />
+            <QuickAction icon="radio-outline" label={tr('Pulse Drops')} meta={tr('Open in 72h')} onPress={() => router.push('/slot-drops' as any)} featured />
             <QuickAction icon="calendar-outline" label={t('home.sessions')} meta={t('home.yourSchedule')} onPress={() => router.push('/history')} />
             <QuickAction icon="sparkles-outline" label={t('home.momentum')} meta={t('home.trackProgress')} onPress={() => router.push('/(tabs)/progress')} />
           </View>

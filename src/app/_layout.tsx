@@ -68,6 +68,8 @@ export default function RootLayout() {
               <Stack.Screen name="trainer-client/[clientId]" />
               <Stack.Screen name="trainer-clients" />
               <Stack.Screen name="momentum" />
+              <Stack.Screen name="slot-drops" />
+              <Stack.Screen name="waitlist/[trainerId]" />
               <Stack.Screen name="integrations" />
               <Stack.Screen name="membership" />
             </Stack>

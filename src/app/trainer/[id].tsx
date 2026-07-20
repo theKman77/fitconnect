@@ -27,7 +27,7 @@ export default function TrainerProfile() {
   const router = useRouter();
   const { start, update } = useBooking();
   const { profile } = useAuth();
-  const { locale, localeTag, isRTL, t } = useLocale();
+  const { locale, localeTag, isRTL, t, tr } = useLocale();
   const [trainer, setTrainer] = useState<TrainerDetail>();
   const [selected, setSelected] = useState<SessionType>();
   const [fav, setFav] = useState(false);
@@ -186,7 +186,7 @@ export default function TrainerProfile() {
           {tab === 'times' && (
             <View style={styles.slotList}>
               {availability.length === 0
-                ? <Card><EmptyState icon="calendar-outline" title={t('profile.noOpenings')} subtitle={t('profile.noOpeningsCopy')} /></Card>
+                ? <Card><EmptyState icon="calendar-outline" title={t('profile.noOpenings')} subtitle={tr('Join a private waitlist and see matching Pulse Drops without sharing your identity with the trainer.')} actionLabel={tr('Tune my waitlist')} onAction={() => router.push(`/waitlist/${trainer.id}` as any)} /></Card>
                 : availability.slice(0, 12).map((slot) => (
                   <Pressable key={slot.id} disabled={slot.booked} onPress={() => bookOn(new Date(slot.starts_at))} style={[styles.opening, isRTL && styles.rtlRow, slot.booked && styles.disabled]}>
                     <View style={styles.dateTile}>

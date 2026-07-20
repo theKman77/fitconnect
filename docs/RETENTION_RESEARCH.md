@@ -40,11 +40,12 @@ Day-one trainer value now implemented:
 - one-tap rebook, check-in, and celebration prompts;
 - transparent repeat-client fee reduction and relationship earnings;
 - persistent history that becomes costly to abandon.
+- aggregate waitlist demand without exposing client identities or contact details;
+- a 72-hour Pulse Drop control that turns otherwise unused openings into matched, protected bookings.
 
 Best next trainer features:
 
 - recurring program templates and reusable session plans;
-- waitlists and last-minute “fill this opening” broadcasts;
 - calendar conflict detection and travel/buffer rules;
 - client package tracking and automated renewal prompts;
 - consented progress summaries the trainer can share with the client;
@@ -70,7 +71,7 @@ Implemented:
 Best next client features:
 
 - a shareable private progress recap controlled by the client;
-- rebook the same trainer/time in one tap;
+- preference-aware alternatives when a repeat session has no matching opening;
 - pause-safe streaks for illness, travel, Ramadan, and recovery;
 - family or household booking controls without exposing health records;
 - women-only discovery and explicit location/privacy controls;

@@ -4,15 +4,16 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
-import { colors, radius } from '@/theme';
+import { colors, fonts, radius } from '@/theme';
 import { useAuth } from '@/context/auth';
 import { addAvailability, getMyTrainer, listAvailability, removeAvailability } from '@/lib/trainer';
+import { broadcastOpening, closeSlotBroadcast, getTrainerDemandSummary, listTrainerBroadcasts } from '@/lib/demand';
 import { confirm, notify } from '@/lib/confirm';
 import { Badge, Card, EmptyState, Txt } from '@/components/ui';
 import { DateRangePicker } from '@/components/scheduling/date-range-picker';
 import { TimeOpeningPicker } from '@/components/scheduling/time-opening-picker';
 import { useLocale } from '@/context/locale';
-import type { AvailabilitySlot, Trainer } from '@/types/domain';
+import type { AvailabilitySlot, SlotBroadcast, Trainer, TrainerDemandSummary } from '@/types/domain';
 
 const TIMES = [
   { label: '7:00 AM', hour: 7 },
@@ -26,20 +27,28 @@ const TIMES = [
 export default function TrainerAvailability() {
   const router = useRouter();
   const { profile } = useAuth();
-  const { locale, isRTL, t } = useLocale();
+  const { locale, localeTag, isRTL, t, tr } = useLocale();
   const [trainer, setTrainer] = useState<Trainer | null>(null);
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [day, setDay] = useState(dayjs().add(1, 'day').startOf('day'));
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [broadcasts, setBroadcasts] = useState<SlotBroadcast[]>([]);
+  const [demand, setDemand] = useState<TrainerDemandSummary>({ waitlisted_clients: 0, open_broadcasts: 0, matched_clients: 0 });
+  const [broadcastBusy, setBroadcastBusy] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
       setError(null);
       const current = await getMyTrainer(profile);
       setTrainer(current);
-      setSlots(await listAvailability(current));
+      const [nextSlots, nextBroadcasts, nextDemand] = current
+        ? await Promise.all([listAvailability(current), listTrainerBroadcasts(current.id), getTrainerDemandSummary(current.id)])
+        : [[], [], { waitlisted_clients: 0, open_broadcasts: 0, matched_clients: 0 }];
+      setSlots(nextSlots);
+      setBroadcasts(nextBroadcasts);
+      setDemand(nextDemand);
     } catch (e: any) {
       setError(e?.message ?? 'Could not load availability.');
     }
@@ -61,6 +70,26 @@ export default function TrainerAvailability() {
       notify('Availability not changed', e?.message ?? 'Please try again.');
     } finally {
       setBusyKey(null);
+    }
+  }
+
+  async function toggleBroadcast(slot: AvailabilitySlot) {
+    if (!trainer) return;
+    const existing = broadcasts.find((item) => item.availability_id === slot.id && item.status === 'open');
+    setBroadcastBusy(slot.id);
+    try {
+      if (existing) {
+        await closeSlotBroadcast(existing.id, trainer.id);
+        notify(tr('Pulse Drop closed'), tr('This opening remains bookable but is no longer being promoted.'));
+      } else {
+        const result = await broadcastOpening(slot);
+        notify(tr('Pulse Drop is live'), `${tr('Privately matched with')} ${new Intl.NumberFormat(localeTag).format(result.matched_count)} ${tr('waiting clients')}.`);
+      }
+      await load();
+    } catch (e: any) {
+      notify(tr('Pulse Drop not changed'), e?.message ?? tr('Please try again.'));
+    } finally {
+      setBroadcastBusy(null);
     }
   }
 
@@ -94,6 +123,15 @@ export default function TrainerAvailability() {
             <Txt variant="caption" style={{ marginTop: 3 }}>{t('availability.heroCopy')}</Txt>
           </View>
         </View>
+        <View style={styles.demandCard}>
+          <View style={[styles.demandTop, isRTL && styles.rtlRow]}><View style={styles.pulseIcon}><Ionicons name="pulse" size={21} color={colors.primary} /></View><View style={{ flex: 1 }}><Txt variant="monoTag">{tr('PRIVATE DEMAND SIGNAL')}</Txt><Txt style={styles.demandTitle}>{tr('Fill the hour, not your inbox.')}</Txt></View></View>
+          <Txt variant="caption" style={{ marginTop: 8 }}>{tr('You see aggregate interest only. Client identities stay private until someone completes a protected booking.')}</Txt>
+          <View style={[styles.demandMetrics, isRTL && styles.rtlRow]}>
+            <DemandMetric value={demand.waitlisted_clients} label={tr('waiting')} localeTag={localeTag} />
+            <DemandMetric value={demand.open_broadcasts} label={tr('live drops')} localeTag={localeTag} />
+            <DemandMetric value={demand.matched_clients} label={tr('matches')} localeTag={localeTag} />
+          </View>
+        </View>
         {error && <Txt variant="caption" color={colors.danger} style={{ marginTop: 12 }}>{error}</Txt>}
 
         <Txt variant="label" style={styles.label}>{t('availability.chooseDay')}</Txt>
@@ -124,9 +162,15 @@ export default function TrainerAvailability() {
                   <Txt variant="bodyStrong">{dayjs(s.starts_at).locale(locale).format('ddd، D MMM · h:mm A')}</Txt>
                   <Txt variant="caption" style={{ marginTop: 2 }}>{dayjs(s.ends_at).diff(dayjs(s.starts_at), 'minute')} {t('availability.minutes')} {s.is_peak ? `· ${t('availability.eveningRate')}` : ''}</Txt>
                 </View>
-                <Pressable hitSlop={10} disabled={s.booked} onPress={() => confirm({ title: t('availability.removeTitle'), message: t('availability.removeCopy'), confirmLabel: t('availability.remove'), destructive: true }, async () => { await removeAvailability(s.id); await load(); })}>
-                  <Ionicons name={s.booked ? 'lock-closed' : 'trash-outline'} size={18} color={s.booked ? colors.textDim : colors.danger} />
-                </Pressable>
+                <View style={styles.slotActions}>
+                  {!s.booked && dayjs(s.starts_at).isBefore(dayjs().add(72, 'hour')) && (() => {
+                    const active = broadcasts.find((item) => item.availability_id === s.id && item.status === 'open');
+                    return <Pressable accessibilityRole="button" accessibilityLabel={tr(active ? 'Close Pulse Drop' : 'Broadcast Pulse Drop')} disabled={broadcastBusy === s.id} onPress={() => toggleBroadcast(s)} style={[styles.pulseButton, active && styles.pulseButtonOn]}><Ionicons name={broadcastBusy === s.id ? 'hourglass-outline' : active ? 'radio' : 'megaphone-outline'} size={15} color={active ? colors.white : colors.primary} /><Txt style={[styles.pulseButtonText, active && { color: colors.white }]}>{tr(active ? 'LIVE' : 'PULSE')}</Txt></Pressable>;
+                  })()}
+                  <Pressable accessibilityRole="button" accessibilityLabel={t('availability.remove')} hitSlop={10} disabled={s.booked} onPress={() => confirm({ title: t('availability.removeTitle'), message: t('availability.removeCopy'), confirmLabel: t('availability.remove'), destructive: true }, async () => { await removeAvailability(s.id); await load(); })}>
+                    <Ionicons name={s.booked ? 'lock-closed' : 'trash-outline'} size={18} color={s.booked ? colors.textDim : colors.danger} />
+                  </Pressable>
+                </View>
               </View>
             ))}
           </Card>
@@ -136,6 +180,10 @@ export default function TrainerAvailability() {
   );
 }
 
+function DemandMetric({ value, label, localeTag }: { value: number; label: string; localeTag: string }) {
+  return <View style={styles.demandMetric}><Txt style={styles.demandValue}>{new Intl.NumberFormat(localeTag).format(value)}</Txt><Txt style={styles.demandLabel}>{label}</Txt></View>;
+}
+
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: colors.bg },
   rtlRow: { direction: 'ltr', flexDirection: 'row-reverse' },
@@ -143,9 +191,21 @@ const styles = StyleSheet.create({
   content: { width: '100%', maxWidth: 680, alignSelf: 'center', padding: 22, paddingBottom: 40 },
   hero: { flexDirection: 'row', alignItems: 'center', gap: 12, padding: 16, borderRadius: radius.xl, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder },
   heroIcon: { width: 44, height: 44, borderRadius: 22, backgroundColor: colors.surface, alignItems: 'center', justifyContent: 'center' },
+  demandCard: { marginTop: 14, borderRadius: radius.xl, padding: 16, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.primaryBorder },
+  demandTop: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  pulseIcon: { width: 43, height: 43, borderRadius: radius.lg, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primaryTint },
+  demandTitle: { fontFamily: fonts.bold, fontSize: 18, color: colors.textPrimary, marginTop: 3 },
+  demandMetrics: { flexDirection: 'row', gap: 8, marginTop: 14 },
+  demandMetric: { flex: 1, borderRadius: radius.md, padding: 10, backgroundColor: colors.surfaceElevated },
+  demandValue: { fontFamily: fonts.extrabold, fontSize: 19, color: colors.textPrimary, fontVariant: ['tabular-nums'] },
+  demandLabel: { fontFamily: fonts.medium, fontSize: 9, color: colors.textMuted, marginTop: 2 },
   label: { marginTop: 24, marginBottom: 12 },
   openingHead: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, marginTop: 24, marginBottom: 13 },
   sectionHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 28, marginBottom: 12 },
   slotRow: { flexDirection: 'row', alignItems: 'center', padding: 15, gap: 12 },
+  slotActions: { flexDirection: 'row', alignItems: 'center', gap: 11 },
+  pulseButton: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 7, backgroundColor: colors.primaryTint, borderWidth: 1, borderColor: colors.primaryBorder },
+  pulseButtonOn: { backgroundColor: colors.primary, borderColor: colors.primary },
+  pulseButtonText: { fontFamily: fonts.monoBold, fontSize: 8, letterSpacing: 0.8, color: colors.primary },
   border: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border },
 });

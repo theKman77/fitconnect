@@ -46,8 +46,8 @@ export async function listTrainers(filter: TrainerFilter = {}): Promise<Trainer[
   });
 }
 
-export async function getTrainer(id: string): Promise<TrainerDetail | undefined> {
-  if (!isBackendConfigured) return seedDetail(id);
+export async function getTrainer(id: string, showcase = false): Promise<TrainerDetail | undefined> {
+  if (!isBackendConfigured || showcase) return seedDetail(id);
 
   const { data: t, error: trainerError } = await supabase.from('trainers').select('*').eq('id', id).single();
   if (trainerError) throw trainerError;

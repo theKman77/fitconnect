@@ -278,6 +278,54 @@ export interface ChallengeLeaderboardEntry {
   is_me: boolean;
 }
 
+export type DemandDaypart = 'morning' | 'afternoon' | 'evening';
+export type SlotBroadcastStatus = 'open' | 'claimed' | 'closed' | 'expired';
+export type WaitlistMatchStatus = 'new' | 'seen' | 'claimed' | 'expired';
+
+export interface WaitlistRequest {
+  id: string;
+  client_id: string;
+  trainer_id: string;
+  session_type_id: string | null;
+  format: SessionFormat;
+  preferred_dayparts: DemandDaypart[];
+  preferred_weekdays: number[];
+  city: string | null;
+  active: boolean;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SlotBroadcast {
+  id: string;
+  availability_id: string;
+  trainer_id: string;
+  status: SlotBroadcastStatus;
+  matched_count: number;
+  expires_at: string;
+  created_at: string;
+  updated_at: string;
+  availability?: AvailabilitySlot;
+  trainer?: Trainer;
+}
+
+export interface WaitlistMatch {
+  id: string;
+  waitlist_id: string;
+  broadcast_id: string;
+  client_id: string;
+  status: WaitlistMatchStatus;
+  created_at: string;
+  seen_at: string | null;
+}
+
+export interface TrainerDemandSummary {
+  waitlisted_clients: number;
+  open_broadcasts: number;
+  matched_clients: number;
+}
+
 /** A trainer joined with their session types + reviews, for profile screens. */
 export interface TrainerDetail extends Trainer {
   session_types: SessionType[];

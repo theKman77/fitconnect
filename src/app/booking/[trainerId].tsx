@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, TextInput, View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import dayjs from 'dayjs';
@@ -36,11 +36,12 @@ const TIME_SLOTS = [
 ];
 export default function BookingFlow() {
   const router = useRouter();
+  const { startStep, rebook } = useLocalSearchParams<{ startStep?: string; rebook?: string }>();
   const { profile } = useAuth();
   const { draft, update, price } = useBooking();
   const { locale, localeTag, isRTL, t } = useLocale();
   const steps = STEP_KEYS.map(t);
-  const [step, setStep] = useState(0);
+  const [step, setStep] = useState(() => Math.max(0, Math.min(3, Number(startStep ?? 0) || 0)));
   const [slot, setSlot] = useState<string | null>(() => draft.scheduledAt ? dayjs(draft.scheduledAt).format('h:mm A') : null);
   const [paying, setPaying] = useState(false);
   const [editingAddress, setEditingAddress] = useState(false);
@@ -338,6 +339,12 @@ export default function BookingFlow() {
         {step === 3 && (
           <>
             <Txt variant="screenTitle">{t('booking.reviewPay')}</Txt>
+            {rebook === '1' && (
+              <View style={[styles.rebookReady, isRTL && styles.rtlRow]}>
+                <Ionicons name="repeat" size={18} color={colors.success} />
+                <View style={{ flex: 1 }}><Txt variant="bodyStrong">{t('booking.repeatReady')}</Txt><Txt variant="caption" style={{ marginTop: 2 }}>{t('booking.repeatReadyCopy')}</Txt></View>
+              </View>
+            )}
             <Card style={{ marginTop: 18 }}>
               <SummaryRow label={t('booking.trainer')} value={trainer.display_name} isRTL={isRTL} />
               <SummaryRow label={t('booking.plan')} value={draft.sessionType ? localizeDomain(draft.sessionType.name, locale) : '—'} isRTL={isRTL} />
@@ -466,6 +473,7 @@ const styles = StyleSheet.create({
   visa: { backgroundColor: '#1434CB', borderRadius: 5, paddingHorizontal: 8, paddingVertical: 4 },
   visaTxt: { fontFamily: fonts.extrabold, fontSize: 11, color: colors.white, letterSpacing: 1 },
   protection: { flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 16, paddingHorizontal: 4 },
+  rebookReady: { flexDirection: 'row', alignItems: 'center', gap: 11, marginTop: 16, padding: 14, borderRadius: radius.lg, backgroundColor: colors.successTint, borderWidth: 1, borderColor: 'rgba(59,209,111,0.25)' },
   footer: { paddingHorizontal: 22, paddingTop: 12, paddingBottom: 24, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: 'rgba(17,19,24,0.98)' },
   footerRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   footerPrice: { fontFamily: fonts.extrabold, fontSize: 20, color: colors.textPrimary, marginTop: 1 },

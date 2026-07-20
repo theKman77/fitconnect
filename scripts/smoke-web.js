@@ -34,6 +34,14 @@ let smokeBrowser = null;
   await page.getByText('صباحاً', { exact: true }).waitFor();
   await page.getByText('بعد الظهر', { exact: true }).waitFor();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-schedule-ar.png'), fullPage: true });
+  await page.goto(`${baseUrl}/slot-drops`, { waitUntil: 'networkidle' });
+  await page.getByText('المواعيد الجيدة لا ينبغي أن تضيع.', { exact: true }).waitFor();
+  await page.getByText('طلب دون كشف العملاء', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-pulse-drops-ar.png'), fullPage: true });
+  await page.goto(`${baseUrl}/waitlist/t-maya`, { waitUntil: 'networkidle' });
+  await page.getByText('أخبر FitConnect بما يناسبك.', { exact: true }).waitFor();
+  await page.getByText('خاصة حتى تختار الحجز', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-private-waitlist-ar.png'), fullPage: true });
   await page.goto(`${baseUrl}/progress`, { waitUntil: 'networkidle' });
   await page.getByText('تقدمي', { exact: true }).first().waitFor();
   await page.getByText('مهمة هذا الأسبوع', { exact: true }).waitFor();
@@ -118,10 +126,21 @@ let smokeBrowser = null;
   await page.goto(`${baseUrl}/trainer-availability`, { waitUntil: 'networkidle' });
   await page.getByText('Own your week', { exact: true }).waitFor();
   await page.getByText('Morning', { exact: true }).waitFor();
+  await page.getByText('PRIVATE DEMAND SIGNAL', { exact: true }).waitFor();
   await page.getByText('Afternoon', { exact: true }).waitFor();
   await page.getByText('Evening', { exact: true }).waitFor();
   await page.getByLabel('Next two weeks').click();
   await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-schedule.png'), fullPage: true });
+
+  await page.goto(`${baseUrl}/slot-drops`, { waitUntil: 'networkidle' });
+  await page.getByText('Good openings should not disappear.', { exact: true }).waitFor();
+  await page.getByText('Demand without exposing clients', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-pulse-drops.png'), fullPage: true });
+
+  await page.goto(`${baseUrl}/waitlist/t-maya`, { waitUntil: 'networkidle' });
+  await page.getByText('Tell FitConnect what fits.', { exact: true }).waitFor();
+  await page.getByText('Private until you choose to book', { exact: true }).waitFor();
+  await page.screenshot({ path: path.join(os.tmpdir(), 'fitconnect-private-waitlist.png'), fullPage: true });
 
   await page.goto(`${baseUrl}/momentum`, { waitUntil: 'networkidle' });
   await page.getByText('Train together. Keep your privacy.', { exact: true }).waitFor();
